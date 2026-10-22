@@ -73,6 +73,21 @@ $env:DM_DATA_DIR = "$env:TEMP\dm-scratch"
 .\bin\x64\Debug\net9.0-windows10.0.19041.0\win-x64\DownloadManager.exe
 ```
 
+## Testing the extension in a real browser
+
+Use a throwaway profile so your own is untouched, and register the host temporarily:
+
+```powershell
+$env:DM_DATA_DIR = "$env:TEMP\dm-scratch"            # app and browser must share this
+.\scripts\install-native-host.ps1                     # HKCU keys; remove with -Uninstall afterwards
+Start-Process "...\DownloadManager.exe"
+msedge --user-data-dir="$env:TEMP\edge-profile" --load-extension="<repo>pps\extension" `
+       --disable-features=DisableLoadExtensionCommandLineSwitch http://localhost:8770/
+# then open the file link in the same profile: msedge --user-data-dir=... http://localhost:8770/pack.zip
+```
+
+Serve a file that is large enough (tens of MB) and throttled, with `Content-Disposition: attachment` and range support; a tiny file finishes in the browser before the extension can pause it. Build header objects before `writeHead` (Node throws if you `setHeader` after it).
+
 ## Packaging
 
 ```powershell

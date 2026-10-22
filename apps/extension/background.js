@@ -57,6 +57,9 @@ async function hand(item, force = false) {
     if (hostMatches(new URL(url).hostname, s.excludedHosts)) return false;
     if (s.minSizeBytes > 0 && item.fileSize > 0 && item.fileSize < s.minSizeBytes) return false;
   }
+  // A small or fast download can finish before we get here. The browser already has the file, and
+  // handing it over would only make a duplicate, so leave it alone.
+  if (item.id >= 0 && (await isComplete(item.id))) return false;
   // Hold the browser download until the app has accepted it, so a failure never loses a download.
   await chrome.downloads.pause(item.id).catch(() => {});
   const res = await send({
@@ -73,6 +76,11 @@ async function hand(item, force = false) {
   await chrome.downloads.resume(item.id).catch(() => {});
   await setBadge(res.error === 'app-not-running' ? 'off' : 'err');
   return false;
+}
+
+async function isComplete(id) {
+  const [cur] = await chrome.downloads.search({ id }).catch(() => []);
+  return !!cur && cur.state === 'complete';
 }
 
 async function setBadge(kind) {

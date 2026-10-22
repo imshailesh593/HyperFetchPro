@@ -4,7 +4,7 @@
 
 - Segmented engine: probing (HEAD, ranged-GET fallback), dynamic halving of the largest segment, preallocated `.part` file with positional writes, state saved every ~2 s, validator check on resume, retry with backoff and `Retry-After`, per-download shared speed throttle, filename sanitising.
 - Store, queues, categories, retry-to-back scheduling, start/stop times by day, sync queues (skip unchanged files), unique file names, global speed limit split across running downloads.
-- Core host, local IPC, native-messaging host, MV3 extension.
+- Core host, local IPC, native-messaging host, MV3 extension (verified in a real Edge browser: capture, cookie forwarding, no duplicate left behind).
 - Options dialog (folder, connections, speed limit, video-tool status/install/update), verified through the real UI.
 - Scheduler and category editor dialogs, verified through the real UI (queue created with 3 parallel downloads and a 02:00–06:00 schedule; category created and persisted).
 - Packaging: self-contained build with bundled Node, per-user `Setup.exe` (Inno Setup) and zip; installing, running without Node on PATH, browser registration and uninstalling were verified.
@@ -25,7 +25,7 @@
 ## Known limitations
 
 - Not yet tried against real internet servers beyond the yt-dlp/GitHub requests; engine tests use local servers.
-- The extension has not been loaded in a real browser; the native-host and core chain was tested with scripted messages.
+- The extension was verified in Edge only (see BROWSER-INTEGRATION.md); Chrome, Brave and Firefox are untried, and only a direct file link was tested (no referrer, no login-protected site).
 - Only one site/video was tried for real (a short public YouTube clip). Instagram, private content and playlists are untested.
 - Media progress is reported per stream, so video+audio downloads show progress restarting between streams.
 - Proxy, FTP, checksums, and per-site connection limits are not implemented.

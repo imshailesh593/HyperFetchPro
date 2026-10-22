@@ -57,8 +57,15 @@ The extension ID is fixed at `jlffphjfmognkklojjfjgmfggcfpbhjb` by the `key` in 
 - The core accepts only `http`, `https` (and `ftp` for plain downloads) links.
 - The extension holds broad permissions (`downloads`, `cookies`, `nativeMessaging`, all-sites access) because capturing logged-in downloads needs them. Review the code in `apps/extension` before loading it.
 
+## What was verified
+
+In Microsoft Edge 155 (throwaway profile, extension loaded unpacked, native host registered, local server): opening a direct file link made Edge start its own download; the extension paused it, the app accepted it and downloaded the whole file over 8 connections (60 MB, byte-for-byte correct), the request carried Edge's `Cookie` and `User-Agent`, and Edge left no partial or duplicate file in its Downloads folder. Chrome and Brave use the same extension API but were not tried.
+
+**Fast downloads:** the extension can only react after the browser has created the download. If a small or fast file has already finished by then, the extension leaves the browser's copy alone instead of creating a duplicate. For larger files the pause happens mid-download and the app takes over.
+
 ## Limitations
 
 - Not distributed through browser stores (their policies restrict downloader extensions); installed unpacked.
 - No Alt-key bypass, no stream/video sniffing yet, no Firefox, no macOS manifest registration.
+- Chrome 137+ may ignore `--load-extension` for branded builds; load the extension from `chrome://extensions` instead (what the install steps describe).
 - If a site hands out single-use or short-lived links, the app downloads with the browser's cookies and referrer but may still be refused.
