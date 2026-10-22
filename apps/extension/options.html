@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Download Manager settings</title>
+<style>body{font:14px system-ui;max-width:640px;margin:24px auto;padding:0 16px}textarea,input{width:100%;box-sizing:border-box;margin:4px 0 14px;font:13px ui-monospace,monospace}small{color:#666}</style>
+<h2>Download Manager integration</h2>
+<label>File types to take over (extensions, space separated)<textarea id="ext" rows="4"></textarea></label>
+<label>Never take over from these sites (one per line or space separated, * wildcard)<textarea id="hosts" rows="3" placeholder="*.example.com"></textarea></label>
+<label>Ignore files smaller than (bytes, 0 = no limit)<input id="min" type="number" min="0"></label>
+<button id="save">Save</button> <span id="msg"></span>
+<p><small>Right-click any link and choose “Download with Download Manager” to send it regardless of these rules.</small></p>
+<script src="options.js"></script>

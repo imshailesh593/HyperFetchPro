@@ -1,0 +1,46 @@
+<ContentDialog x:Class="DownloadManager.AddDownloadDialog"
+                xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                Title="Add download"
+                PrimaryButtonText="Download now"
+                SecondaryButtonText="Add to queue"
+                CloseButtonText="Cancel"
+                DefaultButton="Primary"
+                IsPrimaryButtonEnabled="False"
+                IsSecondaryButtonEnabled="False">
+  <StackPanel Spacing="14" MinWidth="460">
+    <StackPanel Spacing="6">
+      <Grid>
+        <TextBlock Text="Link (HTTP, HTTPS or FTP)" Foreground="{StaticResource CyanBrush}" FontSize="12" />
+        <TextBlock x:Name="ClipboardHint" Text="Link taken from clipboard" HorizontalAlignment="Right"
+                   Foreground="{StaticResource EmeraldBrush}" FontSize="11" Visibility="Collapsed" />
+      </Grid>
+      <Grid ColumnSpacing="8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="UrlBox" PlaceholderText="https://example.com/file.zip" TextChanged="UrlBox_TextChanged" />
+        <Button Grid.Column="1" Content="Paste" Click="Paste_Click" />
+      </Grid>
+      <TextBlock x:Name="UrlError" Foreground="{StaticResource RoseBrush}" FontSize="11" Visibility="Collapsed" />
+    </StackPanel>
+
+    <Grid ColumnSpacing="12">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <ComboBox x:Name="CategoryBox" Header="Category" HorizontalAlignment="Stretch" />
+      <TextBox x:Name="FolderBox" Grid.Column="1" Header="Save to (blank = by category)" PlaceholderText="Default folder" />
+    </Grid>
+    <Button Content="Browse for folder…" Click="Browse_Click" HorizontalAlignment="Right" />
+
+    <Expander Header="Authentication and cookies" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+      <StackPanel Spacing="8">
+        <TextBox x:Name="AuthBox" PlaceholderText="Authorization header (for example: Bearer abc123)" />
+        <TextBox x:Name="CookieBox" PlaceholderText="Cookie header" />
+      </StackPanel>
+    </Expander>
+  </StackPanel>
+</ContentDialog>

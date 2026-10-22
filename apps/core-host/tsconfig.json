@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@dm/engine": ["../../packages/engine/src/index.ts"],
+      "@dm/store": ["../../packages/store/src/index.ts"],
+      "@dm/scheduler": ["../../packages/scheduler/src/index.ts"],
+      "@dm/media": ["../../packages/media/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

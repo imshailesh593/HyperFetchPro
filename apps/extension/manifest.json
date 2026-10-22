@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Download Manager Integration",
+  "version": "0.1.0",
+  "description": "Sends browser downloads to the Download Manager desktop app.",
+  "minimum_chrome_version": "110",
+  "permissions": [
+    "downloads",
+    "nativeMessaging",
+    "cookies",
+    "contextMenus",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Download Manager",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAubajRadoKzsj+aGvhMwzv8R/6OGX1b613B29N5gC+4ujl2EFisCzWLHoVaI7Q7biW3Hl1Rg/U1Wh4vLWLYoYHbCqh9H80+MnF6bd12I9NRRqbi3TBUntwAamapsh8qcTILDM+L5EJh/8BuPTdiQ++2IWa/eghjTCHpSFL83JQTbLWZciyy+4WjdSFpIHQEUWGKp2wHFunCavCrfC9GKnfVaNt+W202VIG9AIa+tTpknacbrNdDxES0XSLyJtVuF6nOlpw/JtKjAaFsDcUnAGBxgnO2noVptZPN96Dxc8lWRc7b2/bmedoJl88Qnz5OxB7hSZmBQk/Kav67iR/vqOxwIDAQAB"
+}

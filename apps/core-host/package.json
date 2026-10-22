@@ -1,0 +1,17 @@
+{
+  "name": "@dm/core-host",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/host.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/host.mjs --alias:@dm/engine=../../packages/engine/src/index.ts --alias:@dm/store=../../packages/store/src/index.ts --alias:@dm/scheduler=../../packages/scheduler/src/index.ts --alias:@dm/media=../../packages/media/src/index.ts --external:node:sqlite --banner:js=\"import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
