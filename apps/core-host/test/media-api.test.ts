@@ -35,7 +35,7 @@ describe('media api with a fake yt-dlp', () => {
     expect(row).toMatchObject({ kind: 'media', format: '22', filename: 'My_ Clip.mp4' });
     await waitFor(() => store.getDownload(row.id)?.status === 'completed');
     expect(await fs.readFile(path.join(row.dir, 'My_ Clip.mp4'), 'utf8')).toBe('video-bytes');
-    expect(store.getDownload(row.id)?.size).toBe(300);
+    expect(store.getDownload(row.id)).toMatchObject({ size: 'video-bytes'.length, downloaded: 'video-bytes'.length });
   });
 
   it('marks a failed video download with yt-dlp\'s message', async () => {

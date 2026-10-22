@@ -261,10 +261,13 @@ export class DownloadManager extends EventEmitter {
       if (outcome === 'completed') {
         const cur = this.store.getDownload(row.id);
         const finalPath = cur ? path.join(cur.dir, cur.filename) : dest;
-        const size = cur?.size ?? row.size ?? (await fs.stat(finalPath).then((s) => s.size).catch(() => null));
+        // Media rows have no size from the server, so record what is on disk.
+        const onDisk = await fs.stat(finalPath).then((s) => s.size).catch(() => null);
+        const size = row.kind === 'media' ? (onDisk ?? cur?.size ?? null) : (cur?.size ?? row.size ?? onDisk);
         this.update(row.id, {
           status: 'completed',
-          downloaded: this.store.getDownload(row.id)?.size ?? size ?? 0,
+          ...(row.kind === 'media' && size != null ? { size } : {}),
+          downloaded: row.kind === 'media' ? (size ?? 0) : (this.store.getDownload(row.id)?.size ?? size ?? 0),
           completedAt: Date.now(),
           error: null,
         });

@@ -100,12 +100,14 @@ export async function installFfmpeg(dataDir: string, fetchFn: typeof fetch = fet
   try {
     const zip = path.join(work, asset);
     writeFileSync(zip, bytes);
-    // bsdtar ships with Windows 10+ and reads zip files; only the one binary is extracted.
-    const member = (await run('tar', ['-tf', zip], { maxBuffer: 64 * 1024 * 1024, windowsHide: true })).stdout
+    // Windows' own bsdtar reads zip files. Called by full path: a GNU tar earlier on PATH (Git for
+    // Windows) would treat "C:" as a remote host.
+    const tar = path.join(process.env.SystemRoot ?? 'C:\Windows', 'System32', 'tar.exe');
+    const member = (await run(tar, ['-tf', zip], { maxBuffer: 64 * 1024 * 1024, windowsHide: true })).stdout
       .split(/\r?\n/)
       .find((l) => /(^|\/)bin\/ffmpeg\.exe$/.test(l));
     if (!member) throw new Error('ffmpeg.exe was not found in the archive');
-    await run('tar', ['-xf', zip, '-C', work, member], { windowsHide: true });
+    await run(tar, ['-xf', zip, '-C', work, member], { windowsHide: true });
 
     const dir = path.join(dataDir, 'bin');
     mkdirSync(dir, { recursive: true });

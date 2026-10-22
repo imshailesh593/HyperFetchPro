@@ -98,7 +98,7 @@ export class MediaDownloader extends EventEmitter {
       '-o', path.join(job.dir, `${job.stem}.%(ext)s`),
       '--progress-template', PROGRESS_TEMPLATE,
       '--print', `after_move:${FILE_PREFIX}%(filepath)s`,
-      ...(launch.ffmpeg ? ['--ffmpeg-location', launch.ffmpeg] : []),
+      ...(launch.ffmpeg ? ['--ffmpeg-location', launch.ffmpeg, '--merge-output-format', 'mp4'] : []),
       ...headerArgs(job.headers),
       '--', job.url,
     ];

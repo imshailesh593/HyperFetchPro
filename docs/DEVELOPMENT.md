@@ -42,6 +42,7 @@ The app locates the core in this order: `DM_CORE_HOST`, `<exe folder>\core\host.
 - TypeScript, ES modules, strict mode. Tests use Vitest; packages that use pipes or child processes set `pool: 'forks'`.
 - Packages are consumed from source through path aliases (`tsconfig.json`, `vitest.config.ts`, esbuild `--alias`). Add a new `@dm/*` package to all three places in every consumer.
 - Database changes are **append-only migrations** in `packages/store/src/store.ts` (`MIGRATIONS`); never edit an existing entry.
+- Call Windows tools by full path when a same-named tool may exist on PATH (Git for Windows' GNU `tar` breaks on `C:` paths; the code uses `%SystemRoot%\System32	ar.exe`).
 - Do not spawn processes with shell strings; pass argument arrays. Links given to yt-dlp go after `--`.
 - Engine behaviour is verified against a local HTTP server (ranges, flaky connections, 404, throttling). Add a test there first when changing it.
 

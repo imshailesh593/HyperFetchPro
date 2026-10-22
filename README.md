@@ -15,7 +15,7 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Core host (stdio JSON API) | Done, tested |
 | Windows app (WinUI 3) | Working: list, Add dialog, drawer, filters, speed limit |
 | Browser extension + native-messaging host (Chrome, Edge, Brave) | Built, host chain tested end to end; extension not yet tried inside a real browser |
-| Video downloads (yt-dlp + ffmpeg) | Backend done and tested; yt-dlp install verified against the real release; ffmpeg installer written, not yet run against the real release; **no UI yet** |
+| Video downloads (yt-dlp + ffmpeg) | Backend done and verified end to end: both tools install with checksum verification and a real public video downloaded and merged to a playable mp4; **no UI yet** |
 | Options, Scheduler and category-editor screens | Not built (the core supports them) |
 | Installer / packaging, auto-update | Not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
