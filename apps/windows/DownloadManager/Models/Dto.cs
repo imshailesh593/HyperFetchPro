@@ -70,3 +70,36 @@ public sealed class ProgressDto
     public double Speed { get; set; }
     public List<SegmentDto> Segments { get; set; } = [];
 }
+
+public sealed class ToolDto
+{
+    public string Path { get; set; } = "";
+    public string? Version { get; set; }
+}
+
+public sealed class MediaStatusDto
+{
+    public ToolDto? YtDlp { get; set; }
+    public string? Ffmpeg { get; set; }
+}
+
+public sealed class MediaFormatDto
+{
+    public string Id { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Ext { get; set; } = "mp4";
+    public long? Size { get; set; }
+    public string Kind { get; set; } = "";
+
+    public override string ToString() =>
+        Size is > 0 ? $"{Label}  ·  {DownloadManager.Services.Fmt.Bytes(Size.Value)}" : Label;
+}
+
+public sealed class MediaInfoDto
+{
+    public string Title { get; set; } = "";
+    public string? Uploader { get; set; }
+    public double? Duration { get; set; }
+    public bool CanMerge { get; set; }
+    public List<MediaFormatDto> Formats { get; set; } = [];
+}

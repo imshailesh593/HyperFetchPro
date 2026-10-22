@@ -218,6 +218,32 @@ public sealed class MainViewModel : Observable
         await _core.CallAsync("settings.set", new { speedLimit = mb >= UnlimitedSliderValue ? 0 : (long)(mb * 1048576) });
     }
 
+    // --- video downloads ---------------------------------------------------------
+
+    public Task<MediaStatusDto> MediaStatusAsync() => _core.CallAsync<MediaStatusDto>("media.status");
+
+    public Task<MediaInfoDto> MediaInfoAsync(string url, Dictionary<string, string>? headers) =>
+        _core.CallAsync<MediaInfoDto>("media.info", new { url, headers });
+
+    /// <summary>Installs whichever of yt-dlp and ffmpeg is missing (downloaded and checksum-verified by the core).</summary>
+    public async Task InstallMediaToolsAsync(Action<string>? status = null)
+    {
+        var st = await MediaStatusAsync();
+        if (st.YtDlp is null)
+        {
+            status?.Invoke("Downloading yt-dlp…");
+            await _core.CallAsync("media.install");
+        }
+        if (st.Ffmpeg is null)
+        {
+            status?.Invoke("Downloading ffmpeg (about 130 MB)…");
+            await _core.CallAsync("media.installFfmpeg");
+        }
+    }
+
+    public Task AddMediaAsync(string url, MediaInfoDto info, MediaFormatDto format, bool startNow, string? dir, Dictionary<string, string>? headers) =>
+        _core.CallAsync("media.add", new { url, title = info.Title, format = format.Id, ext = format.Ext, startNow, dir, headers });
+
     private static string GlyphFor(string category) => category switch
     {
         "Video" => "",

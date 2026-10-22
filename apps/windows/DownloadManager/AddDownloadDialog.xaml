@@ -1,6 +1,7 @@
 <ContentDialog x:Class="DownloadManager.AddDownloadDialog"
                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                RequestedTheme="Dark"
                 Title="Add download"
                 PrimaryButtonText="Download now"
                 SecondaryButtonText="Add to queue"
@@ -25,6 +26,33 @@
       </Grid>
       <TextBlock x:Name="UrlError" Foreground="{StaticResource RoseBrush}" FontSize="11" Visibility="Collapsed" />
     </StackPanel>
+
+    <!-- Video / audio from websites (YouTube, Instagram, ...) -->
+    <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
+            CornerRadius="8" Padding="12">
+      <StackPanel Spacing="8">
+        <Grid ColumnSpacing="8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <FontIcon Glyph="&#xE714;" FontSize="14" Foreground="{StaticResource RoseBrush}" />
+            <TextBlock Text="Video or audio from a website" VerticalAlignment="Center" />
+          </StackPanel>
+          <Button x:Name="FindVideoButton" Grid.Column="1" Content="Find video" Click="FindVideo_Click" IsEnabled="False"
+                  AutomationProperties.Name="Find video" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <ProgressRing x:Name="VideoRing" Width="16" Height="16" IsActive="False" Visibility="Collapsed" />
+          <TextBlock x:Name="VideoStatus" FontSize="12" Foreground="{StaticResource DimTextBrush}" TextWrapping="Wrap" MaxWidth="420" />
+        </StackPanel>
+        <Button x:Name="InstallToolsButton" Content="Install video tools" Click="InstallTools_Click" Visibility="Collapsed"
+                AutomationProperties.Name="Install video tools" />
+        <ComboBox x:Name="QualityBox" Header="Quality" HorizontalAlignment="Stretch" Visibility="Collapsed"
+                  AutomationProperties.Name="Quality" />
+      </StackPanel>
+    </Border>
 
     <Grid ColumnSpacing="12">
       <Grid.ColumnDefinitions>

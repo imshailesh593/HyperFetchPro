@@ -132,13 +132,16 @@ public sealed partial class MainWindow : Window
 
     private async void Add_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new AddDownloadDialog(this, Content.XamlRoot, Vm.CategoryList);
+        var dialog = new AddDownloadDialog(this, Content.XamlRoot, Vm);
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.None) return;
         var startNow = result == ContentDialogResult.Primary;
         await Run(async () =>
         {
-            await Vm.AddAsync(dialog.Url, startNow, dialog.CategoryId, dialog.Folder, dialog.Headers);
+            if (dialog.SelectedMedia is { } media)
+                await Vm.AddMediaAsync(dialog.Url, media.Info, media.Format, startNow, dialog.Folder, dialog.Headers);
+            else
+                await Vm.AddAsync(dialog.Url, startNow, dialog.CategoryId, dialog.Folder, dialog.Headers);
             Toast(startNow ? "Download started" : "Added to the queue");
         });
     }

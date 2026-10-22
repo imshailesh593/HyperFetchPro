@@ -15,7 +15,7 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Core host (stdio JSON API) | Done, tested |
 | Windows app (WinUI 3) | Working: list, Add dialog, drawer, filters, speed limit |
 | Browser extension + native-messaging host (Chrome, Edge, Brave) | Built, host chain tested end to end; extension not yet tried inside a real browser |
-| Video downloads (yt-dlp + ffmpeg) | Backend done and verified end to end: both tools install with checksum verification and a real public video downloaded and merged to a playable mp4; **no UI yet** |
+| Video downloads (yt-dlp + ffmpeg) | Working end to end, including the Add-dialog flow (Find video, quality picker, one-click tool install): both tools install with checksum verification and a real public video downloaded and merged to a playable mp4. Only one site tried so far |
 | Options, Scheduler and category-editor screens | Not built (the core supports them) |
 | Installer / packaging, auto-update | Not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
@@ -30,7 +30,7 @@ Details and known gaps: [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Queues and scheduling.** A main download queue, a main sync queue and your own queues, each with parallel-download limits and start/stop times by day. Failed items go to the back and are retried.
 - **Categories.** Files are sorted into folders by type (Compressed, Documents, Music, Programs, Video, or your own).
 - **Browser capture.** An extension takes over downloads by file type, forwards cookies and referrer, and falls back to the browser if the app is not running.
-- **Video and audio from the web** (backend): quality list, merging of separate video/audio streams, same queue and pause/resume behaviour.
+- **Video and audio from the web:** paste a link, press *Find video*, pick a quality; separate video/audio streams are merged to mp4; same queue and pause/resume behaviour as any download.
 - **Speed limit** shared across all running downloads.
 - **Native Windows 11 look** following the supplied design: acrylic window, live speed graph, 32-cell progress strip, connection-details drawer.
 

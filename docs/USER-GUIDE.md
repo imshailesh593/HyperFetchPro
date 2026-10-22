@@ -58,16 +58,17 @@ Default categories: Compressed, Documents, Music, Programs, Video. A download go
 
 See [BROWSER-INTEGRATION.md](BROWSER-INTEGRATION.md). In short: install the extension and native host once; then downloads of the configured file types in Chrome, Edge or Brave are handed to the app with your login cookies. If the app is not running, the browser keeps the download, so nothing is lost.
 
-## Video and audio from websites *(backend done, UI planned)*
+## Video and audio from websites
 
-The core can list qualities and download from YouTube, Instagram and other sites supported by yt-dlp. In the UI this will appear in the Add dialog. Until then it is reachable through the [protocol](PROTOCOL.md) (`media.*` methods).
+Works for YouTube, Instagram and the other sites yt-dlp supports.
 
-Two tools are involved:
+1. Press **Add URL** and paste the page link of the video.
+2. Press **Find video** in the *Video or audio from a website* box. The title, length and uploader appear with a **Quality** list (*Best available*, one entry per height, *Audio only*). Sizes are shown when the site reports them.
+3. Choose a quality, then **Download now** or **Add to queue**. It appears in the list like any download (queues, pause, resume and retry behave the same) and is saved as `.mp4` in the Video category folder.
 
-- **yt-dlp** is installed on request into `<data folder>\bin`, downloaded from `github.com/yt-dlp` and verified against the published SHA-256 checksum before it replaces anything.
-- **ffmpeg** is required for most modern sites, because they serve video and audio as separate streams that must be merged. On Windows the app can install it from yt-dlp's FFmpeg-Builds releases (also checksum-verified). On macOS install it yourself (for example `brew install ffmpeg`).
+**First use:** if the tools are missing the box offers **Install video tools**. This downloads yt-dlp (from `github.com/yt-dlp`) and ffmpeg (about 130 MB, from yt-dlp's FFmpeg-Builds releases) into `<data folder>in`, checking each against its published SHA-256 before use. ffmpeg is needed because most sites serve video and audio separately and they must be merged; without it only single-file qualities are listed and many YouTube videos have none. On macOS install ffmpeg yourself (for example `brew install ffmpeg`).
 
-Without ffmpeg only the formats that already contain both audio and video are offered, and many YouTube videos then have none. Private Instagram posts and stories need your login cookies.
+Notes: private Instagram posts and stories need your login cookies (paste a `Cookie` header under *Authentication and cookies*). Playlists are not supported yet; a link downloads one video. Progress for merged videos restarts between the video and audio streams. yt-dlp must be kept current because sites change; update support is *(planned)*.
 
 ## Where data is stored
 

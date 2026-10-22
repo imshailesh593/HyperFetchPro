@@ -1,4 +1,5 @@
 using DownloadManager.Models;
+using DownloadManager.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.DataTransfer;
@@ -13,16 +14,22 @@ public sealed partial class AddDownloadDialog : ContentDialog
         public override string ToString() => Name;
     }
 
-    private readonly Window _owner;
+    /// <summary>A video the user picked a quality for; null means a plain file download.</summary>
+    public sealed record MediaChoice(MediaInfoDto Info, MediaFormatDto Format);
 
-    public AddDownloadDialog(Window owner, XamlRoot root, IEnumerable<CategoryDto> categories)
+    private readonly Window _owner;
+    private readonly MainViewModel _vm;
+    private MediaInfoDto? _info;
+
+    public AddDownloadDialog(Window owner, XamlRoot root, MainViewModel vm)
     {
         _owner = owner;
+        _vm = vm;
         InitializeComponent();
         XamlRoot = root;
 
         CategoryBox.Items.Add(new CategoryChoice(null, "Automatic (by file type)"));
-        foreach (var c in categories) CategoryBox.Items.Add(new CategoryChoice(c.Id, c.Name));
+        foreach (var c in vm.CategoryList) CategoryBox.Items.Add(new CategoryChoice(c.Id, c.Name));
         CategoryBox.SelectedIndex = 0;
         Loaded += async (_, _) => await TryPasteFromClipboardAsync(auto: true);
     }
@@ -30,6 +37,11 @@ public sealed partial class AddDownloadDialog : ContentDialog
     public string Url => UrlBox.Text.Trim();
     public int? CategoryId => (CategoryBox.SelectedItem as CategoryChoice)?.Id;
     public string? Folder => string.IsNullOrWhiteSpace(FolderBox.Text) ? null : FolderBox.Text.Trim();
+
+    public MediaChoice? SelectedMedia =>
+        _info is not null && QualityBox.Visibility == Visibility.Visible && QualityBox.SelectedItem is MediaFormatDto f
+            ? new MediaChoice(_info, f)
+            : null;
 
     public Dictionary<string, string>? Headers
     {
@@ -45,14 +57,95 @@ public sealed partial class AddDownloadDialog : ContentDialog
     private static bool IsSupported(string text) =>
         Uri.TryCreate(text, UriKind.Absolute, out var u) && u.Scheme is "http" or "https" or "ftp";
 
+    private static bool IsWeb(string text) =>
+        Uri.TryCreate(text, UriKind.Absolute, out var u) && u.Scheme is "http" or "https";
+
     private void UrlBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         var text = Url;
         var ok = IsSupported(text);
         IsPrimaryButtonEnabled = IsSecondaryButtonEnabled = ok;
+        FindVideoButton.IsEnabled = IsWeb(text);
         UrlError.Text = text.Length > 0 && !ok ? "Enter a full http://, https:// or ftp:// link." : "";
         UrlError.Visibility = UrlError.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ResetVideo(); // a different link invalidates any quality list
     }
+
+    // --- video ---------------------------------------------------------------------
+
+    private void ResetVideo()
+    {
+        _info = null;
+        QualityBox.Visibility = Visibility.Collapsed;
+        QualityBox.Items.Clear();
+        InstallToolsButton.Visibility = Visibility.Collapsed;
+        VideoStatus.Text = "";
+    }
+
+    private void Busy(bool busy, string? text = null)
+    {
+        VideoRing.IsActive = busy;
+        VideoRing.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        FindVideoButton.IsEnabled = !busy && IsWeb(Url);
+        InstallToolsButton.IsEnabled = !busy;
+        if (text is not null) VideoStatus.Text = text;
+    }
+
+    private async void FindVideo_Click(object sender, RoutedEventArgs e) => await FindVideoAsync();
+
+    private async Task FindVideoAsync()
+    {
+        var url = Url;
+        ResetVideo();
+        Busy(true, "Looking for video…");
+        try
+        {
+            var status = await _vm.MediaStatusAsync();
+            if (status.YtDlp is null)
+            {
+                Busy(false, "Video downloading needs yt-dlp and ffmpeg. They are downloaded once and checked against published checksums.");
+                InstallToolsButton.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var info = await _vm.MediaInfoAsync(url, Headers);
+            if (url != Url) return; // the link changed while we were waiting
+            _info = info;
+            foreach (var f in info.Formats) QualityBox.Items.Add(f);
+            QualityBox.SelectedIndex = 0;
+            QualityBox.Visibility = Visibility.Visible;
+
+            var length = info.Duration is { } d ? $" ({TimeSpan.FromSeconds(d):h\\:mm\\:ss})" : "";
+            var hint = "";
+            if (!info.CanMerge)
+            {
+                hint = "\nffmpeg is missing, so only single-file qualities are listed.";
+                InstallToolsButton.Visibility = Visibility.Visible;
+            }
+            Busy(false, $"{info.Title}{length}{(info.Uploader is { } u ? " — " + u : "")}{hint}\nChoose a quality, then Download now or Add to queue.");
+        }
+        catch (Exception ex)
+        {
+            Busy(false, ex.Message.Length > 300 ? ex.Message[..300] + "…" : ex.Message);
+        }
+    }
+
+    private async void InstallTools_Click(object sender, RoutedEventArgs e)
+    {
+        Busy(true, "Installing…");
+        try
+        {
+            await _vm.InstallMediaToolsAsync(text => VideoStatus.Text = text);
+            InstallToolsButton.Visibility = Visibility.Collapsed;
+            await FindVideoAsync();
+        }
+        catch (Exception ex)
+        {
+            Busy(false, "Install failed: " + ex.Message);
+        }
+    }
+
+    // --- clipboard and folder ---------------------------------------------------------
 
     private async void Paste_Click(object sender, RoutedEventArgs e) => await TryPasteFromClipboardAsync(auto: false);
 
