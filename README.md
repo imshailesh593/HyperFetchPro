@@ -18,7 +18,7 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Video downloads (yt-dlp + ffmpeg) | Working end to end, including the Add-dialog flow (Find video, quality picker, one-click tool install): both tools install with checksum verification and a real public video downloaded and merged to a playable mp4. Only one site tried so far |
 | Options screen (folder, connections, speed limit, video tools install/update) | Done, verified through the real UI |
 | Scheduler (queues, start/stop times, days, parallel limits) and category editor | Done, verified through the real UI. "Exit when finished" is implemented but not yet tried |
-| Installer / packaging, auto-update | Not built |
+| Packaging and installer | Done: self-contained build with bundled Node, `Setup.exe` (per-user, no admin), zip. Install, run and uninstall verified. Unsigned. Auto-update not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
 | Firefox, Android | Not started |
 
@@ -35,7 +35,11 @@ Details and known gaps: [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Speed limit** shared across all running downloads.
 - **Native Windows 11 look** following the supplied design: acrylic window, live speed graph, 32-cell progress strip, connection-details drawer.
 
-## Quick start (Windows)
+## Install (Windows)
+
+Build the installer with `scriptsuild-package.ps1` (needs Node, the .NET 9 SDK and Inno Setup 6; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), then run `dist\HyperFetchPro-Setup-0.1.0.exe`. It installs for the current user without administrator rights, includes its own Node runtime, and can set up Chrome/Edge/Brave integration. Nothing else needs to be installed. The installer is not code-signed, so Windows SmartScreen may warn on first run.
+
+## Quick start from source (Windows)
 
 Requirements: Node.js 22+ (24 recommended), .NET 9 SDK, Windows 10 SDK 10.0.19041+.
 

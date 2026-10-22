@@ -2,6 +2,14 @@
 
 This guide describes what works today in the Windows app. Features marked *(planned)* are not in the UI yet.
 
+## Installing
+
+Run `HyperFetchPro-Setup-<version>.exe`. It installs for your user account (no administrator needed), adds a Start-menu shortcut, and by default sets up browser integration for Chrome, Edge and Brave. Nothing else needs to be installed; the app brings its own engine. Because the installer is not code-signed, Windows SmartScreen may ask you to confirm (*More info*, then *Run anyway*).
+
+To finish browser setup, load the extension once: open `chrome://extensions` (or `edge://extensions`), turn on *Developer mode*, choose *Load unpacked*, and pick the `integration\extension` folder inside the install folder (the final installer page can open it for you).
+
+Uninstall from *Settings > Apps*. This removes the program and the browser registration but keeps your download list and settings (`%APPDATA%\DownloadManager`); delete that folder as well if you want a clean slate.
+
 ## Main window
 
 - **Title bar:** engine status, the connection mode button, and search (`Ctrl+K`). Search matches file names and links.

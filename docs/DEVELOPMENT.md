@@ -73,6 +73,29 @@ $env:DM_DATA_DIR = "$env:TEMP\dm-scratch"
 .\bin\x64\Debug\net9.0-windows10.0.19041.0\win-x64\DownloadManager.exe
 ```
 
-## Packaging (not done)
+## Packaging
 
-Needed for a shippable build: bundle `node.exe` and `host.mjs` under `core\`, build the WinUI app self-contained (already configured), create an installer (MSIX or Inno Setup/WiX), code-sign, and register the native host from the installer instead of the script. For macOS: a SwiftUI app with the same protocol, signing and notarization.
+```powershell
+.\scriptsuild-package.ps1 -Version 0.1.0
+```
+
+Do not add `2>&1` when calling it from Windows PowerShell 5.1: stderr lines from npm are then treated as errors.
+
+It runs six steps and writes to `dist\` (git-ignored):
+
+1. Builds `host.mjs` and `native-host.cjs`.
+2. `dotnet publish -c Release -r win-x64 --self-contained` of the WinUI app (the Windows App SDK is also self-contained, so no .NET or runtime install is needed on the target).
+3. Copies the Node runtime (`node.exe` found on PATH) and `host.mjs` to `core\`.
+4. Copies the extension, `native-host.cjs` and `install-native-host.ps1` to `integration\`.
+5. Zips everything to `HyperFetchPro-win-x64.zip` (about 96 MB; 252 MB unpacked).
+6. If Inno Setup 6 is installed (`winget install JRSoftware.InnoSetup`), compiles `installer\HyperFetchPro.iss` to `HyperFetchPro-Setup-<version>.exe` (about 65 MB).
+
+The app finds its engine in this order: `DM_CORE_HOST`, `core\host.mjs` beside the exe, a dev-tree search. It finds Node as `DM_NODE`, then `core
+ode.exe`, then PATH.
+
+**Installer behaviour** (`installer/HyperFetchPro.iss`): per-user install to `%LOCALAPPDATA%\Programs\HyperFetch Pro` (no administrator; the wizard can switch to all users), Start-menu shortcut, optional desktop shortcut, a *browser integration* task (on by default) that runs `integration\install-native-host.ps1`, and an uninstaller that unregisters the browser host and removes the files. User data in `%APPDATA%\DownloadManager` is kept.
+
+**Verified:** silent install into a temp folder; app launched with Node removed from PATH and used the bundled `core
+ode.exe`; Chrome host key and launcher present; silent uninstall removed the folder, shortcut and registry keys and kept the data folder.
+
+**Not done:** code signing (Windows SmartScreen will warn), an app icon and version resources, auto-update, MSIX. For macOS: a SwiftUI app with the same protocol, signing and notarization.

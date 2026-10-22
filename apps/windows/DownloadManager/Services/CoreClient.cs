@@ -26,7 +26,7 @@ public sealed class CoreClient : IDisposable
     public void Start()
     {
         var host = FindHost();
-        var psi = new ProcessStartInfo(Environment.GetEnvironmentVariable("DM_NODE") ?? "node.exe")
+        var psi = new ProcessStartInfo(FindNode())
         {
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -104,6 +104,15 @@ public sealed class CoreClient : IDisposable
         if (!root.TryGetProperty("id", out var idEl) || !_pending.TryRemove(idEl.GetInt32(), out var tcs)) return;
         if (root.TryGetProperty("error", out var err)) tcs.TrySetException(new InvalidOperationException(err.GetString()));
         else tcs.TrySetResult(root.GetProperty("result").Clone());
+    }
+
+    /// <summary>DM_NODE, then the Node that ships with the app (core/node.exe), then node.exe on PATH.</summary>
+    private static string FindNode()
+    {
+        var fromEnv = Environment.GetEnvironmentVariable("DM_NODE");
+        if (!string.IsNullOrEmpty(fromEnv)) return fromEnv;
+        var bundled = Path.Combine(AppContext.BaseDirectory, "core", "node.exe");
+        return File.Exists(bundled) ? bundled : "node.exe";
     }
 
     private static string FindHost()

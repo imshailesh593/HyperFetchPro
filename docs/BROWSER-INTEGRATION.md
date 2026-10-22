@@ -23,6 +23,10 @@ Right-click any link, video or audio element and choose **Download with Download
 
 ## Install
 
+**With the installer:** leave *browser integration* ticked, then load `<install folder>\integration\extension` as an unpacked extension (step 3 below). Everything else is done for you.
+
+**From source:**
+
 1. Build the host bundles:
    ```powershell
    npm install

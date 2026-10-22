@@ -1,14 +1,15 @@
 <#
   Registers the native-messaging host for Chrome, Edge and Brave for the current user (no admin needed).
-  Writes a launcher .cmd and a manifest into the install folder, then adds the HKCU registry keys.
+  Writes a launcher .cmd and a manifest into %LOCALAPPDATA%\DownloadManager\native-host, then adds HKCU keys.
+
+  Works from the source tree (uses node from PATH and apps\native-host\dist) and from an installed
+  copy (uses the bundled core\node.exe and the native-host.cjs next to this script).
   Usage: .\install-native-host.ps1 [-Uninstall]
 #>
 param([switch]$Uninstall)
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path $PSScriptRoot -Parent
 $name = 'com.downloadmanager.host'
-$extId = (Get-Content "$root\apps\extension\extension-id.txt").Trim()
 $outDir = Join-Path $env:LOCALAPPDATA 'DownloadManager\native-host'
 $keys = @(
   "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$name",
@@ -23,9 +24,19 @@ if ($Uninstall) {
   return
 }
 
-$bundle = "$root\apps\native-host\dist\native-host.cjs"
-if (-not (Test-Path $bundle)) { throw "Build it first: npm run build --workspace @dm/native-host" }
-$node = (Get-Command node.exe -ErrorAction Stop).Source
+if (Test-Path "$PSScriptRoot\native-host.cjs") {
+  # installed layout: <app>\integration\{this script, native-host.cjs, extension\}  and  <app>\core\node.exe
+  $bundle = "$PSScriptRoot\native-host.cjs"
+  $node = (Resolve-Path "$PSScriptRoot\..\core\node.exe").Path
+  $extDir = "$PSScriptRoot\extension"
+} else {
+  $root = Split-Path $PSScriptRoot -Parent
+  $bundle = "$root\apps\native-host\dist\native-host.cjs"
+  if (-not (Test-Path $bundle)) { throw "Build it first: npm run build --workspace @dm/native-host" }
+  $node = (Get-Command node.exe -ErrorAction Stop).Source
+  $extDir = "$root\apps\extension"
+}
+$extId = (Get-Content "$extDir\extension-id.txt").Trim()
 
 New-Item -ItemType Directory -Force $outDir | Out-Null
 Copy-Item $bundle "$outDir\native-host.cjs" -Force
@@ -46,4 +57,5 @@ foreach ($k in $keys) {
   Set-ItemProperty -Path $k -Name '(default)' -Value $manifestPath
 }
 "Registered for Chrome, Edge and Brave. Extension ID: $extId"
-"Now load apps\extension as an unpacked extension (chrome://extensions, Developer mode)."
+"Now load the extension folder as an unpacked extension (chrome://extensions, Developer mode):"
+$extDir
