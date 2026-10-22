@@ -33,6 +33,18 @@ File names come from the server (`Content-Disposition`) or the link. If a file w
 
 Pausing keeps all partial data. Resuming checks that the file on the server is unchanged; if it changed, the download restarts from zero rather than producing a corrupt file. Servers that do not support byte ranges download over one connection and cannot resume mid-file.
 
+## Options
+
+Open with the **Options** button or `Ctrl+,`.
+
+- **Default download folder:** must be a full path. Files go into a category subfolder inside it unless you choose a folder when adding.
+- **Connections per download:** 1 to 32 (default 8). Applies to downloads started afterwards.
+- **Speed limit:** in MB/s across all downloads; 0 means unlimited. Also adjustable from the sidebar slider.
+- **Video tools:** shows the installed yt-dlp version and whether ffmpeg is present; **Install** / **Update** for yt-dlp and **Install ffmpeg**. Update yt-dlp whenever a site stops working.
+- **Data:** where the database, tools and crash log live.
+
+Save applies everything at once and is remembered. Proxy, file-type lists for the browser (set in the extension's own options), and scheduler settings are not in this dialog yet.
+
 ## Connections and Turbo
 
 The Turbo button switches between **8** connections per download (default) and **32**. More connections can be faster on high-latency or per-connection-limited links, but some servers limit or block many connections from one client. It applies to downloads started afterwards.
@@ -68,7 +80,7 @@ Works for YouTube, Instagram and the other sites yt-dlp supports.
 
 **First use:** if the tools are missing the box offers **Install video tools**. This downloads yt-dlp (from `github.com/yt-dlp`) and ffmpeg (about 130 MB, from yt-dlp's FFmpeg-Builds releases) into `<data folder>in`, checking each against its published SHA-256 before use. ffmpeg is needed because most sites serve video and audio separately and they must be merged; without it only single-file qualities are listed and many YouTube videos have none. On macOS install ffmpeg yourself (for example `brew install ffmpeg`).
 
-Notes: private Instagram posts and stories need your login cookies (paste a `Cookie` header under *Authentication and cookies*). Playlists are not supported yet; a link downloads one video. Progress for merged videos restarts between the video and audio streams. yt-dlp must be kept current because sites change; update support is *(planned)*.
+Notes: private Instagram posts and stories need your login cookies (paste a `Cookie` header under *Authentication and cookies*). Playlists are not supported yet; a link downloads one video. Progress for merged videos restarts between the video and audio streams. yt-dlp must be kept current because sites change; use **Update** in Options.
 
 ## Where data is stored
 
@@ -80,7 +92,7 @@ Notes: private Instagram posts and stories need your login cookies (paste a `Coo
 | Crash log | `%LOCALAPPDATA%\DownloadManager\crash.log` |
 | Browser host files | `%LOCALAPPDATA%\DownloadManager\native-host` |
 
-Default download folder: `Downloads` in your user profile (change with the `defaultDir` setting; a settings screen is *(planned)*).
+Default download folder: `Downloads` in your user profile; change it in Options.
 
 Environment variables: `DM_DATA_DIR` (data folder), `DM_NODE` (node.exe path), `DM_CORE_HOST` (path to `host.mjs`), `DM_YTDLP`, `DM_FFMPEG` (tool paths).
 

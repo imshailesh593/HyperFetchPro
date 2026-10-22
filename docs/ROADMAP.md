@@ -5,13 +5,14 @@
 - Segmented engine: probing (HEAD, ranged-GET fallback), dynamic halving of the largest segment, preallocated `.part` file with positional writes, state saved every ~2 s, validator check on resume, retry with backoff and `Retry-After`, per-download shared speed throttle, filename sanitising.
 - Store, queues, categories, retry-to-back scheduling, start/stop times by day, sync queues (skip unchanged files), unique file names, global speed limit split across running downloads.
 - Core host, local IPC, native-messaging host, MV3 extension.
+- Options dialog (folder, connections, speed limit, video-tool status/install/update), verified through the real UI.
 - WinUI 3 app with the supplied design, including the video flow in the Add dialog (verified by driving the real UI: link from clipboard, Find video, download to a finished mp4).
 - Media backend: format list, runner with pause/resume, checksum-verified yt-dlp installer (verified against the real release and a real public video), ffmpeg installer. Both were run against the real releases, and a real public video was downloaded, merged and checked with ffmpeg (19 s, video + audio, mp4).
 
 ## Next (suggested order)
 
 1. **Video polish:** progress that spans video + audio, playlists, yt-dlp update button / auto-update, more sites tested (Instagram, private content).
-2. **Options screen:** default folder, connections, speed limit, file types, sites to skip, proxy.
+2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app, auto-update of yt-dlp.
 3. **Scheduler screen** and category editor: expose what the core already supports.
 4. **Packaging:** bundle Node, installer, native-host registration, auto-update (the app and yt-dlp).
 5. **Quotas** (for example 40 MB/hour) and **periodic sync repeat** interval.

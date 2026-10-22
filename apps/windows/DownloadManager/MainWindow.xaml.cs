@@ -37,6 +37,11 @@ public sealed partial class MainWindow : Window
         search.Invoked += (_, e) => { SearchBox.Focus(FocusState.Keyboard); e.Handled = true; };
         Root.KeyboardAccelerators.Add(search);
 
+        // Ctrl+, (VirtualKey has no name for the comma key, so use its code, 188).
+        var options = new KeyboardAccelerator { Key = (Windows.System.VirtualKey)188, Modifiers = Windows.System.VirtualKeyModifiers.Control };
+        options.Invoked += (_, e) => { Options_Click(this, new RoutedEventArgs()); e.Handled = true; };
+        Root.KeyboardAccelerators.Add(options);
+
         _limitTimer = _ui.CreateTimer();
         _limitTimer.Interval = TimeSpan.FromMilliseconds(400);
         _limitTimer.IsRepeating = false;
@@ -143,6 +148,20 @@ public sealed partial class MainWindow : Window
             else
                 await Vm.AddAsync(dialog.Url, startNow, dialog.CategoryId, dialog.Folder, dialog.Headers);
             Toast(startNow ? "Download started" : "Added to the queue");
+        });
+    }
+
+    private async void Options_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SettingsDialog(this, Content.XamlRoot, Vm);
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        await Run(async () =>
+        {
+            await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb);
+            _suppressLimit = true; // keep the sidebar slider in step without re-saving
+            LimitSlider.Value = Math.Clamp(Vm.SpeedLimitMb, LimitSlider.Minimum, LimitSlider.Maximum);
+            _suppressLimit = false;
+            Toast("Settings saved");
         });
     }
 

@@ -63,7 +63,7 @@ public sealed class MainViewModel : Observable
     public bool TurboOn => _maxConnections >= 32;
     public string TurboLabel => TurboOn ? "Turbo: 32 connections" : $"Standard: {_maxConnections} connections";
     public double SpeedLimitMb { get => _speedLimitMb; private set { if (Set(ref _speedLimitMb, value)) Raise(nameof(SpeedLimitText)); } }
-    public string SpeedLimitText => _speedLimitMb >= UnlimitedSliderValue ? "UNLIMITED" : $"{_speedLimitMb:0} MB/s";
+    public string SpeedLimitText => _speedLimitMb >= UnlimitedSliderValue ? "UNLIMITED" : $"{_speedLimitMb:0.#} MB/s";
     public string DefaultDir { get => _defaultDir; private set => Set(ref _defaultDir, value); }
 
     // --- loading ---------------------------------------------------------------
@@ -85,7 +85,7 @@ public sealed class MainViewModel : Observable
         QueueRunning = snap.Queues.FirstOrDefault(q => q.Id == MainDownloadQueue)?.Running ?? false;
         DefaultDir = snap.Settings.DefaultDir;
         MaxConnections = snap.Settings.MaxConnections;
-        SpeedLimitMb = snap.Settings.SpeedLimit > 0 ? Math.Clamp(Math.Round(snap.Settings.SpeedLimit / 1048576), 10, UnlimitedSliderValue - 1) : UnlimitedSliderValue;
+        SpeedLimitMb = snap.Settings.SpeedLimit > 0 ? Math.Clamp(Math.Round(snap.Settings.SpeedLimit / 1048576, 1), 0.1, UnlimitedSliderValue - 1) : UnlimitedSliderValue;
         Connected = true;
         ConnectionText = "Engine running";
         Refresh();
@@ -217,6 +217,27 @@ public sealed class MainViewModel : Observable
         SpeedLimitMb = mb;
         await _core.CallAsync("settings.set", new { speedLimit = mb >= UnlimitedSliderValue ? 0 : (long)(mb * 1048576) });
     }
+
+    // --- options ---------------------------------------------------------------------
+
+    /// <summary>Saves the Options dialog. A speed of 0 (or the slider maximum) means unlimited.</summary>
+    public async Task SaveSettingsAsync(string dir, int connections, double speedMb)
+    {
+        var unlimited = speedMb <= 0 || speedMb >= UnlimitedSliderValue;
+        await _core.CallAsync("settings.set", new
+        {
+            defaultDir = dir,
+            maxConnections = connections,
+            speedLimit = unlimited ? 0L : (long)(speedMb * 1048576),
+        });
+        DefaultDir = dir;
+        MaxConnections = connections;
+        SpeedLimitMb = unlimited ? UnlimitedSliderValue : speedMb;
+    }
+
+    /// <summary>Downloads the latest yt-dlp (also used to update it).</summary>
+    public Task InstallYtDlpAsync() => _core.CallAsync("media.install");
+    public Task InstallFfmpegAsync() => _core.CallAsync("media.installFfmpeg");
 
     // --- video downloads ---------------------------------------------------------
 

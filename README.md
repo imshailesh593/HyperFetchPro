@@ -16,7 +16,8 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Windows app (WinUI 3) | Working: list, Add dialog, drawer, filters, speed limit |
 | Browser extension + native-messaging host (Chrome, Edge, Brave) | Built, host chain tested end to end; extension not yet tried inside a real browser |
 | Video downloads (yt-dlp + ffmpeg) | Working end to end, including the Add-dialog flow (Find video, quality picker, one-click tool install): both tools install with checksum verification and a real public video downloaded and merged to a playable mp4. Only one site tried so far |
-| Options, Scheduler and category-editor screens | Not built (the core supports them) |
+| Options screen (folder, connections, speed limit, video tools install/update) | Done, verified through the real UI |
+| Scheduler and category-editor screens | Not built (the core supports them) |
 | Installer / packaging, auto-update | Not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
 | Firefox, Android | Not started |

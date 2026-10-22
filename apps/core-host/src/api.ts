@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { Media } from '@dm/media';
 import { DownloadManager, Scheduler } from '@dm/scheduler';
 import { MAIN_DOWNLOAD_QUEUE, type DownloadRow, type Store } from '@dm/store';
@@ -148,7 +149,10 @@ export class Api {
           s.setSetting('maxConnections', String(num('maxConnections')));
           this.manager.setMaxConnections(num('maxConnections'));
         }
-        if (typeof p.defaultDir === 'string') s.setSetting('defaultDir', p.defaultDir);
+        if (typeof p.defaultDir === 'string') {
+          if (!path.isAbsolute(p.defaultDir)) throw new Error('The download folder must be a full path');
+          s.setSetting('defaultDir', p.defaultDir);
+        }
         return {};
       }
 

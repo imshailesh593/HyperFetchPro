@@ -126,6 +126,16 @@
             <TextBlock Text="Stop queue" />
           </StackPanel>
         </Button>
+
+        <Rectangle Width="1" Height="18" Fill="{StaticResource HairlineBrush}" Margin="4,0" />
+
+        <Button Style="{StaticResource RibbonButton}" Click="Options_Click" AutomationProperties.Name="Options"
+                ToolTipService.ToolTip="Options (Ctrl+,)">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <FontIcon Glyph="&#xE713;" FontSize="12" Foreground="{StaticResource BlueBrush}" />
+            <TextBlock Text="Options" />
+          </StackPanel>
+        </Button>
       </StackPanel>
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">

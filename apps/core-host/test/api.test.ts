@@ -89,6 +89,9 @@ describe('Api', () => {
     await expect(api.handle('download.add', { url: 'file:///etc/passwd' })).rejects.toThrow(/http, https and ftp/);
     await expect(api.handle('download.pause', {})).rejects.toThrow(/id/);
     await expect(api.handle('nope')).rejects.toThrow(/Unknown method/);
+    await expect(api.handle('settings.set', { defaultDir: 'relative/dir' })).rejects.toThrow(/full path/);
+    await api.handle('settings.set', { defaultDir: dir });
+    expect(store.getSetting('defaultDir')).toBe(dir);
   });
 
   it('removes downloads and deletes files on request', async () => {
