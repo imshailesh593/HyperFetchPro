@@ -20,6 +20,8 @@ public sealed partial class SettingsDialog : ContentDialog
         FolderBox.Text = vm.DefaultDir;
         ConnBox.Value = vm.MaxConnections;
         SpeedBox.Value = vm.SpeedLimitMb >= MainViewModel.UnlimitedSliderValue ? 0 : vm.SpeedLimitMb;
+        QuotaMbBox.Value = vm.QuotaMb;
+        QuotaHoursBox.Value = vm.QuotaHours;
         DataText.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DownloadManager")
             + "\nDownload list and settings: downloads.db. Video tools: bin\\. Crash log: %LOCALAPPDATA%\\DownloadManager\\crash.log";
         Loaded += async (_, _) => await RefreshToolsAsync();
@@ -27,6 +29,8 @@ public sealed partial class SettingsDialog : ContentDialog
 
     public string Folder => FolderBox.Text.Trim();
     public int Connections => (int)Math.Clamp(double.IsNaN(ConnBox.Value) ? 8 : ConnBox.Value, 1, 32);
+    public double QuotaMb => double.IsNaN(QuotaMbBox.Value) ? 0 : Math.Max(0, QuotaMbBox.Value);
+    public double QuotaHours => double.IsNaN(QuotaHoursBox.Value) ? 1 : Math.Clamp(QuotaHoursBox.Value, 0.1, 720);
     public double SpeedMb => double.IsNaN(SpeedBox.Value) ? 0 : Math.Max(0, SpeedBox.Value);
 
     private void Folder_TextChanged(object sender, TextChangedEventArgs e)

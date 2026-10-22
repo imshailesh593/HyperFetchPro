@@ -32,7 +32,7 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `format` | string\|null | yt-dlp format selector (media only) |
 | `createdAt`, `completedAt` | epoch ms, epoch ms\|null | |
 
-**Queue**: `id, name, kind ('download'|'sync'), maxParallel, startTime ('HH:MM'|null), stopTime, days (bitmask, bit0 = Sunday, 127 = every day), afterAction ('none'|'exit'|'shutdown'), running`.
+**Queue**: `id, name, kind ('download'|'sync'), maxParallel, startTime ('HH:MM'|null), stopTime, days (bitmask, bit0 = Sunday, 127 = every day), afterAction ('none'|'exit'|'shutdown'), repeatMinutes (sync only), running`.
 **Category**: `id, name, extensions[], saveDir|null`.
 **Segment**: `start, end (null if unknown), written` in bytes.
 
@@ -41,7 +41,7 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | Method | Params | Result |
 |---|---|---|
 | `ping` | – | `{pong:true}` |
-| `state.snapshot` | – | `{downloads[], queues[], categories[], settings:{defaultDir, speedLimit, maxConnections}}` |
+| `state.snapshot` | – | `{downloads[], queues[], categories[], settings:{defaultDir, speedLimit, maxConnections, quotaMb, quotaHours}, quota}` |
 | `download.add` | `url` (http/https/ftp), optional `dir`, `filename`, `headers`, `categoryId`, `queueId`, `startNow` | download row. `startNow:true` starts at once; otherwise it is queued in the main queue |
 | `download.start` | `id` | `{}` |
 | `download.pause` | `id` | `{}` |
@@ -49,14 +49,14 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `downloads.pauseAll` / `downloads.resumeAll` | – | `{}` (resume starts paused, failed and queued rows) |
 | `queue.start` / `queue.stop` | `id` | `{}` |
 | `queue.list` | – | queues with `running` |
-| `queue.add` | `name`, optional `kind` (`download`\|`sync`), `maxParallel` (1–10), `startTime`/`stopTime` (`HH:MM` or null), `days` (0–127), `afterAction` | the queue |
+| `queue.add` | `name`, optional `kind` (`download`\|`sync`), `maxParallel` (1–10), `startTime`/`stopTime` (`HH:MM` or null), `days` (0–127), `afterAction`, `repeatMinutes` (1–1440 or null; sync queues) | the queue |
 | `queue.update` | `id` plus any of the same fields | updated queue (a time set to null clears it) |
 | `queue.delete` | `id` (not 1 or 2) | `{deleted}`; its downloads become unqueued |
 | `category.list` | – | categories |
 | `category.add` | `name`, `extensions` (array or space/comma string), optional `saveDir` (absolute) | the category |
 | `category.update` | `id` plus any of `name`, `extensions`, `saveDir` (`""`/null clears) | the category |
 | `category.delete` | `id` | `{deleted}` |
-| `settings.set` | any of `speedLimit` (bytes/s, 0 = unlimited), `maxConnections` (1–32), `defaultDir` | `{}` |
+| `settings.set` | any of `speedLimit` (bytes/s, 0 = unlimited), `maxConnections` (1–32), `defaultDir` (absolute), `quotaMb` (0 = off), `quotaHours` (0.1–720) | `{}` |
 | `media.status` | – | `{ytDlp:{path,version}\|null, ffmpeg:path\|null}` |
 | `media.install` | – | installs yt-dlp; `{path, sha256}` |
 | `media.installFfmpeg` | – | installs ffmpeg (Windows); `{path, sha256}` |
@@ -75,6 +75,7 @@ Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, 
 | `queue.changed` | `{queueId, running}` |
 | `queue.finished` | `{queueId, afterAction}`: the UI decides whether to exit or shut down |
 | `capture.added` | `{id}`: a browser download was handed over |
+| `quota.changed` | `{limitBytes, windowMs, used, blocked, resumeAt}` when the limit is reached, lifted or edited |
 | `queues.changed`, `categories.changed` | `{}`: reload the list |
 | `host.ready` | `{pid, dataDir}` |
 

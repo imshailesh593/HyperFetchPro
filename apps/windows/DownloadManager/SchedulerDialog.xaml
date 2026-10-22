@@ -74,6 +74,8 @@
             <CheckBox x:Name="DayFri" Content="Fri" MinWidth="0" />
             <CheckBox x:Name="DaySat" Content="Sat" MinWidth="0" />
           </StackPanel>
+          <NumberBox x:Name="RepeatBox" Header="Repeat every (minutes, 0 = run once)" Minimum="0" Maximum="1440"
+                     SpinButtonPlacementMode="Inline" SmallChange="5" Visibility="Collapsed" AutomationProperties.Name="Repeat interval" />
           <TextBlock x:Name="SyncHint" FontSize="11" Foreground="{StaticResource DimTextBrush}" TextWrapping="Wrap" />
         </StackPanel>
 

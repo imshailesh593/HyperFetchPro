@@ -42,6 +42,7 @@ public sealed class QueueDto
     /// <summary>Bit 0 = Sunday ... bit 6 = Saturday.</summary>
     public int Days { get; set; } = 127;
     public string AfterAction { get; set; } = "none";
+    public int? RepeatMinutes { get; set; }
 
     public override string ToString() => Running ? $"{Name}  (running)" : Name;
 }
@@ -61,6 +62,18 @@ public sealed class SettingsDto
     public string DefaultDir { get; set; } = "";
     public double SpeedLimit { get; set; }
     public int MaxConnections { get; set; } = 8;
+    public double QuotaMb { get; set; }
+    public double QuotaHours { get; set; } = 1;
+}
+
+public sealed class QuotaDto
+{
+    public double LimitBytes { get; set; }
+    public double WindowMs { get; set; }
+    public double Used { get; set; }
+    public bool Blocked { get; set; }
+    /// <summary>Epoch milliseconds when downloads resume, while blocked.</summary>
+    public double? ResumeAt { get; set; }
 }
 
 public sealed class SnapshotDto
@@ -69,6 +82,7 @@ public sealed class SnapshotDto
     public List<QueueDto> Queues { get; set; } = [];
     public List<CategoryDto> Categories { get; set; } = [];
     public SettingsDto Settings { get; set; } = new();
+    public QuotaDto Quota { get; set; } = new();
 }
 
 public sealed class ProgressDto

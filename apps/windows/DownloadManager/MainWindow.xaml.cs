@@ -170,7 +170,7 @@ public sealed partial class MainWindow : Window
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         await Run(async () =>
         {
-            await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb);
+            await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb, dialog.QuotaMb, dialog.QuotaHours);
             _suppressLimit = true; // keep the sidebar slider in step without re-saving
             LimitSlider.Value = Math.Clamp(Vm.SpeedLimitMb, LimitSlider.Minimum, LimitSlider.Maximum);
             _suppressLimit = false;

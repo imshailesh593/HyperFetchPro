@@ -487,6 +487,8 @@
           <Run Text="{x:Bind Vm.TotalSpeedValue, Mode=OneWay}" Foreground="{StaticResource EmeraldBrush}" FontWeight="Bold" />
           <Run Text="{x:Bind Vm.TotalSpeedUnit, Mode=OneWay}" Foreground="{StaticResource EmeraldBrush}" />
         </TextBlock>
+        <TextBlock Text="{x:Bind Vm.QuotaText, Mode=OneWay}" Style="{StaticResource MonoText}" FontSize="11"
+                   Foreground="{StaticResource AmberBrush}" Visibility="{x:Bind svc:Ui.VisIfText(Vm.QuotaText), Mode=OneWay}" />
         <TextBlock Text="Browser extension: not installed" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource FaintTextBrush}" />
       </StackPanel>
     </Grid>

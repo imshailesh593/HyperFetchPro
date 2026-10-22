@@ -31,8 +31,8 @@ const DEFAULTS = {
 export class Downloader extends EventEmitter {
   status: DownloadStatus = 'idle';
 
-  private readonly opts: Required<Omit<DownloadOptions, 'headers' | 'speedLimit'>> &
-    Pick<DownloadOptions, 'headers'>;
+  private readonly opts: Required<Omit<DownloadOptions, 'headers' | 'speedLimit' | 'onBytes'>> &
+    Pick<DownloadOptions, 'headers' | 'onBytes'>;
   private readonly throttle: Throttle;
   private segments: Segment[] = [];
   private active = new Set<Segment>();
@@ -294,14 +294,17 @@ export class Downloader extends EventEmitter {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (this.controller.signal.aborted) break; // paused while this chunk was in flight: drop it, it is fetched again on resume
         let chunk = value;
         const room = seg.end - (seg.start + seg.written);
         if (room <= 0) break; // another connection took the rest of this segment
         if (chunk.length > room) chunk = chunk.subarray(0, room);
         await this.throttle.take(chunk.length, this.controller.signal);
+        if (this.controller.signal.aborted) break;
         await this.handle!.write(chunk, 0, chunk.length, seg.start + seg.written);
         seg.written += chunk.length;
         this.downloaded += chunk.length;
+        this.opts.onBytes?.(chunk.length);
         if (seg.start + seg.written >= seg.end) break;
       }
     } finally {
@@ -328,7 +331,7 @@ export class Downloader extends EventEmitter {
     const [t0, b0] = this.samples[0];
     const speed = now > t0 ? ((this.downloaded - b0) / (now - t0)) * 1000 : 0;
     const info: ProgressInfo = {
-      downloaded: this.downloaded,
+      downloaded: this.info?.size != null ? Math.min(this.downloaded, this.info.size) : this.downloaded,
       size: this.info?.size ?? null,
       speed,
       segments: this.segments.map((s) => ({ ...s })),

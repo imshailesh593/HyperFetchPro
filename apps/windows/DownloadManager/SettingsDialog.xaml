@@ -44,6 +44,22 @@
         </StackPanel>
       </Grid>
 
+      <StackPanel Spacing="6">
+        <TextBlock Text="DOWNLOAD LIMIT" Style="{StaticResource SectionLabel}" />
+        <Grid ColumnSpacing="12">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <NumberBox x:Name="QuotaMbBox" Header="Maximum amount (MB, 0 = off)" SpinButtonPlacementMode="Inline"
+                     Minimum="0" Maximum="10000000" SmallChange="10" AutomationProperties.Name="Download limit amount" />
+          <NumberBox x:Name="QuotaHoursBox" Grid.Column="1" Header="Per period (hours)" SpinButtonPlacementMode="Inline"
+                     Minimum="0.1" Maximum="720" SmallChange="0.5" AutomationProperties.Name="Download limit period" />
+        </Grid>
+        <TextBlock Text="For connections with a fair-use cap: downloads pause when the amount is used up and continue by themselves when the period ends."
+                   FontSize="11" Foreground="{StaticResource DimTextBrush}" TextWrapping="Wrap" />
+      </StackPanel>
+
       <StackPanel Spacing="8">
         <TextBlock Text="VIDEO TOOLS" Style="{StaticResource SectionLabel}" />
         <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"

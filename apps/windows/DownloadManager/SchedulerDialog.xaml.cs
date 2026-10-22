@@ -63,7 +63,9 @@ public sealed partial class SchedulerDialog : ContentDialog
         KindText.Text = q.Kind == "sync"
             ? "Synchronization queue: files stay in the queue and are re-downloaded only when they changed on the server."
             : "Download queue: files leave the queue when finished.";
-        SyncHint.Text = q.Kind == "sync" ? "Checking runs once at the start time (repeat intervals are planned)." : "";
+        RepeatBox.Visibility = q.Kind == "sync" ? Visibility.Visible : Visibility.Collapsed;
+        RepeatBox.Value = q.RepeatMinutes ?? 0;
+        SyncHint.Text = q.Kind == "sync" ? "After a check finishes, the queue runs again after this many minutes, until its stop time (or the end of the day)." : "";
 
         StartCheck.IsChecked = q.StartTime is not null;
         StartPicker.Time = ParseTime(q.StartTime) ?? new TimeSpan(2, 0, 0);
@@ -113,6 +115,7 @@ public sealed partial class SchedulerDialog : ContentDialog
                 stopTime = StopCheck.IsChecked == true ? Format(StopPicker.Time) : null,
                 days = days == 0 ? 127 : days,
                 afterAction = AfterBox.SelectedIndex == 1 ? "exit" : "none",
+                repeatMinutes = q.Kind == "sync" && !double.IsNaN(RepeatBox.Value) && RepeatBox.Value >= 1 ? (int?)(int)RepeatBox.Value : null,
             });
             await ReloadAsync(q.Id);
             Say("Saved.", error: false);

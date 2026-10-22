@@ -49,9 +49,10 @@ Open with the **Options** button or `Ctrl+,`.
 - **Connections per download:** 1 to 32 (default 8). Applies to downloads started afterwards.
 - **Speed limit:** in MB/s across all downloads; 0 means unlimited. Also adjustable from the sidebar slider.
 - **Video tools:** shows the installed yt-dlp version and whether ffmpeg is present; **Install** / **Update** for yt-dlp and **Install ffmpeg**. Update yt-dlp whenever a site stops working.
+- **Download limit:** a maximum amount (MB) per period (hours), for connections with a fair-use cap, for example 40 MB per 1 hour. When the amount is used up, running downloads pause and new ones wait; the status bar says *Download limit reached. Resumes at HH:MM*, and everything continues by itself when the period ends. The period starts at the first byte downloaded and the used amount survives restarts. The limit can be exceeded by about 1 to 2 MB (data already in flight when downloads stop). Videos downloaded through yt-dlp are counted from progress reports and can overshoot more. 0 turns the limit off.
 - **Data:** where the database, tools and crash log live.
 
-Save applies everything at once and is remembered. Proxy, file-type lists for the browser (set in the extension's own options), and scheduler settings are not in this dialog yet.
+Save applies everything at once and is remembered. Proxy settings and the browser file-type lists (set in the extension's own options) are not in this dialog yet.
 
 ## Connections and Turbo
 
@@ -75,7 +76,11 @@ Open **Scheduler** in the ribbon to manage queues. Pick a queue on the left, or 
 - **When the queue finishes:** do nothing, or exit the application. (A shut-down option exists in the core but is not offered in the UI.)
 - **Apply** saves; **Start now** and **Stop** control the queue immediately.
 
-Deleting a custom queue keeps its downloads in the list, just unqueued. The two main queues cannot be deleted. Repeat intervals for synchronization and download quotas (for example 40 MB per hour) are *(planned)*.
+- **Repeat every N minutes** (synchronization queues): after a check finishes, the queue runs again after N minutes until its stop time (or the end of the day). Stopping the queue ends the repetition.
+
+Deleting a custom queue keeps its downloads in the list, just unqueued. The two main queues cannot be deleted.
+
+When the download limit (see Options) is reached, queue items that were running go back to *Queued* and the queue resumes them in order after the period ends.
 
 ## Categories
 

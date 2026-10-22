@@ -36,6 +36,9 @@ public sealed class MainViewModel : Observable
     private int _maxConnections = 8;
     private double _speedLimitMb = UnlimitedSliderValue;
     private string _defaultDir = "";
+    private QuotaDto _quota = new();
+    private double _quotaMb;
+    private double _quotaHours = 1;
 
     public MainViewModel(CoreClient core) => _core = core;
 
@@ -64,6 +67,23 @@ public sealed class MainViewModel : Observable
     public string TurboLabel => TurboOn ? "Turbo: 32 connections" : $"Standard: {_maxConnections} connections";
     public double SpeedLimitMb { get => _speedLimitMb; private set { if (Set(ref _speedLimitMb, value)) Raise(nameof(SpeedLimitText)); } }
     public string SpeedLimitText => _speedLimitMb >= UnlimitedSliderValue ? "UNLIMITED" : $"{_speedLimitMb:0.#} MB/s";
+    public double QuotaMb { get => _quotaMb; private set => Set(ref _quotaMb, value); }
+    public double QuotaHours { get => _quotaHours; private set => Set(ref _quotaHours, value); }
+    public QuotaDto Quota { get => _quota; private set { _quota = value; Raise(nameof(Quota), nameof(QuotaText)); } }
+
+    /// <summary>Status-bar text: empty when no limit is set.</summary>
+    public string QuotaText
+    {
+        get
+        {
+            if (_quota.LimitBytes <= 0) return "";
+            if (_quota.Blocked && _quota.ResumeAt is { } at)
+                return "Download limit reached. Resumes at " + DateTimeOffset.FromUnixTimeMilliseconds((long)at).ToLocalTime().ToString("t");
+            var hours = _quota.WindowMs / 3_600_000;
+            return $"Limit: {Fmt.Bytes((long)_quota.LimitBytes)} per {(hours == 1 ? "hour" : $"{hours:0.#} hours")}";
+        }
+    }
+
     public string DefaultDir { get => _defaultDir; private set => Set(ref _defaultDir, value); }
 
     // --- loading ---------------------------------------------------------------
@@ -84,6 +104,9 @@ public sealed class MainViewModel : Observable
         _all.AddRange(snap.Downloads.OrderByDescending(d => d.Id).Select(d => DownloadItem.From(d, CategoryName)));
         QueueRunning = snap.Queues.FirstOrDefault(q => q.Id == MainDownloadQueue)?.Running ?? false;
         DefaultDir = snap.Settings.DefaultDir;
+        QuotaMb = snap.Settings.QuotaMb;
+        QuotaHours = snap.Settings.QuotaHours;
+        Quota = snap.Quota;
         MaxConnections = snap.Settings.MaxConnections;
         SpeedLimitMb = snap.Settings.SpeedLimit > 0 ? Math.Clamp(Math.Round(snap.Settings.SpeedLimit / 1048576, 1), 0.1, UnlimitedSliderValue - 1) : UnlimitedSliderValue;
         Connected = true;
@@ -114,6 +137,9 @@ public sealed class MainViewModel : Observable
             case "download.removed":
                 var id = data.GetProperty("id").GetInt32();
                 if (_all.RemoveAll(d => d.Id == id) > 0) Refresh();
+                break;
+            case "quota.changed":
+                Quota = data.Deserialize<QuotaDto>(CoreClient.Json)!;
                 break;
             case "queue.changed":
                 if (data.GetProperty("queueId").GetInt32() == MainDownloadQueue)
@@ -256,7 +282,7 @@ public sealed class MainViewModel : Observable
     // --- options ---------------------------------------------------------------------
 
     /// <summary>Saves the Options dialog. A speed of 0 (or the slider maximum) means unlimited.</summary>
-    public async Task SaveSettingsAsync(string dir, int connections, double speedMb)
+    public async Task SaveSettingsAsync(string dir, int connections, double speedMb, double quotaMb, double quotaHours)
     {
         var unlimited = speedMb <= 0 || speedMb >= UnlimitedSliderValue;
         await _core.CallAsync("settings.set", new
@@ -264,7 +290,11 @@ public sealed class MainViewModel : Observable
             defaultDir = dir,
             maxConnections = connections,
             speedLimit = unlimited ? 0L : (long)(speedMb * 1048576),
+            quotaMb,
+            quotaHours,
         });
+        QuotaMb = quotaMb;
+        QuotaHours = quotaHours;
         DefaultDir = dir;
         MaxConnections = connections;
         SpeedLimitMb = unlimited ? UnlimitedSliderValue : speedMb;

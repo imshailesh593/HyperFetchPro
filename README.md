@@ -17,6 +17,7 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Browser extension + native-messaging host (Chrome, Edge, Brave) | Working: verified in real Edge 155 (a browser download was taken over, downloaded by the app over 8 connections with the browser's cookie, nothing left in the browser's folder). Chrome and Brave not tried |
 | Video downloads (yt-dlp + ffmpeg) | Working end to end, including the Add-dialog flow (Find video, quality picker, one-click tool install): both tools install with checksum verification and a real public video downloaded and merged to a playable mp4. Only one site tried so far |
 | Options screen (folder, connections, speed limit, video tools install/update) | Done, verified through the real UI |
+| Download limit (quota, for example 40 MB per hour) and sync repeat interval | Done in the core with tests; limit verified in the real app (downloads held, status-bar notice). Resuming after the period is covered by unit tests only |
 | Scheduler (queues, start/stop times, days, parallel limits) and category editor | Done, verified through the real UI. "Exit when finished" is implemented but not yet tried |
 | Packaging and installer | Done: self-contained build with bundled Node, `Setup.exe` (per-user, no admin), zip. Install, run and uninstall verified. Unsigned. Auto-update not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |

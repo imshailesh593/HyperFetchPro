@@ -10,6 +10,8 @@ export interface SchedulerOptions {
   retryDelayMs?: number;
   /** After this many failures a download stays failed instead of re-queuing. */
   maxQueueAttempts?: number;
+  /** Milliseconds per "repeat minute"; only tests change it. */
+  repeatUnitMs?: number;
 }
 
 /**
@@ -22,6 +24,7 @@ export class Scheduler extends EventEmitter {
   private running = new Set<number>();
   private lastFired = new Map<string, string>();
   private retryTimers = new Map<number, NodeJS.Timeout>();
+  private repeatTimers = new Map<number, NodeJS.Timeout>();
   private tickTimer: NodeJS.Timeout | null = null;
   private readonly now: () => Date;
   private readonly retryDelayMs: number;
@@ -37,6 +40,9 @@ export class Scheduler extends EventEmitter {
     this.retryDelayMs = options.retryDelayMs ?? 30_000;
     this.maxAttempts = options.maxQueueAttempts ?? 20;
     manager.on('finished', (id: number, outcome: Outcome) => this.onFinished(id, outcome));
+    manager.on('quotaReset', () => {
+      for (const q of [...this.running]) this.fill(q);
+    });
   }
 
   /** Begin watching schedules. */
@@ -51,6 +57,8 @@ export class Scheduler extends EventEmitter {
     this.tickTimer = null;
     for (const t of this.retryTimers.values()) clearTimeout(t);
     this.retryTimers.clear();
+    for (const t of this.repeatTimers.values()) clearTimeout(t);
+    this.repeatTimers.clear();
   }
 
   isRunning(queueId: number): boolean {
@@ -72,6 +80,7 @@ export class Scheduler extends EventEmitter {
 
   /** Stop a queue; its running downloads are paused and can resume on the next start. */
   stopQueue(queueId: number): void {
+    this.clearRepeatTimer(queueId); // stopping by hand or at the stop time also ends the repetition
     if (!this.running.delete(queueId)) return;
     this.clearRetryTimer(queueId);
     for (const d of this.store.listDownloads({ queueId, status: 'running' })) this.manager.pause(d.id);
@@ -102,6 +111,7 @@ export class Scheduler extends EventEmitter {
   private fill(queueId: number): void {
     const queue = this.store.getQueue(queueId);
     if (!queue || !this.running.has(queueId)) return;
+    if (this.manager.quotaBlocked) return; // the manager restarts held downloads when the window ends
     const nowMs = this.now().getTime();
     let slots = queue.maxParallel - this.store.listDownloads({ queueId, status: 'running' }).length;
     while (slots-- > 0) {
@@ -117,6 +127,7 @@ export class Scheduler extends EventEmitter {
     if (pending.length === 0) {
       this.running.delete(queue.id);
       this.clearRetryTimer(queue.id);
+      this.scheduleRepeat(queue);
       this.emit('queueFinished', queue.id, queue.afterAction satisfies AfterAction);
       return;
     }
@@ -146,6 +157,35 @@ export class Scheduler extends EventEmitter {
     }, delay);
     t.unref();
     this.retryTimers.set(queueId, t);
+  }
+
+  /** A synchronization queue with a repeat interval runs again later, until its stop time or the end of the day. */
+  private scheduleRepeat(queue: QueueRow): void {
+    if (queue.kind !== 'sync' || !queue.repeatMinutes) return;
+    const now = this.now();
+    const next = now.getTime() + queue.repeatMinutes * (this.options.repeatUnitMs ?? 60_000);
+    const limit = new Date(now);
+    if (queue.stopTime) {
+      const [h, m] = queue.stopTime.split(':').map(Number);
+      limit.setHours(h, m, 0, 0);
+      if (limit.getTime() <= now.getTime()) return; // the stop time has already passed today
+    } else {
+      limit.setHours(23, 59, 59, 999);
+    }
+    if (this.options.repeatUnitMs === undefined && next >= limit.getTime()) return;
+    this.clearRepeatTimer(queue.id);
+    const t = setTimeout(() => {
+      this.repeatTimers.delete(queue.id);
+      this.startQueue(queue.id);
+    }, Math.max(0, next - now.getTime()));
+    t.unref();
+    this.repeatTimers.set(queue.id, t);
+  }
+
+  private clearRepeatTimer(queueId: number): void {
+    const t = this.repeatTimers.get(queueId);
+    if (t) clearTimeout(t);
+    this.repeatTimers.delete(queueId);
   }
 
   private clearRetryTimer(queueId: number): void {

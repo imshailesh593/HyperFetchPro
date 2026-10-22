@@ -43,6 +43,9 @@ const MIGRATIONS: string[] = [
   ALTER TABLE downloads ADD COLUMN kind TEXT NOT NULL DEFAULT 'http';
   ALTER TABLE downloads ADD COLUMN format TEXT;
   `,
+  `
+  ALTER TABLE queues ADD COLUMN repeat_minutes INTEGER;
+  `,
 ];
 
 const DOWNLOAD_COLUMNS: Record<string, string> = {
@@ -54,7 +57,7 @@ const DOWNLOAD_COLUMNS: Record<string, string> = {
 
 const QUEUE_COLUMNS: Record<string, string> = {
   name: 'name', kind: 'kind', maxParallel: 'max_parallel', startTime: 'start_time',
-  stopTime: 'stop_time', days: 'days', afterAction: 'after_action',
+  stopTime: 'stop_time', days: 'days', afterAction: 'after_action', repeatMinutes: 'repeat_minutes',
 };
 
 export type NewDownload = Pick<DownloadRow, 'url' | 'dir' | 'filename'> &
@@ -181,9 +184,9 @@ export class Store {
 
   addQueue(input: Partial<Omit<QueueRow, 'id'>> & { name: string }): QueueRow {
     const { id } = this.run(
-      'INSERT INTO queues (name, kind, max_parallel, start_time, stop_time, days, after_action) VALUES (?,?,?,?,?,?,?)',
+      'INSERT INTO queues (name, kind, max_parallel, start_time, stop_time, days, after_action, repeat_minutes) VALUES (?,?,?,?,?,?,?,?)',
       input.name, input.kind ?? 'download', input.maxParallel ?? 1, input.startTime ?? null,
-      input.stopTime ?? null, input.days ?? 127, input.afterAction ?? 'none',
+      input.stopTime ?? null, input.days ?? 127, input.afterAction ?? 'none', input.repeatMinutes ?? null,
     );
     return this.getQueue(id)!;
   }
@@ -277,7 +280,7 @@ function toQueue(r: Row): QueueRow {
     id: r.id as number, name: r.name as string, kind: r.kind as QueueRow['kind'],
     maxParallel: r.max_parallel as number, startTime: r.start_time as string | null,
     stopTime: r.stop_time as string | null, days: r.days as number,
-    afterAction: r.after_action as QueueRow['afterAction'],
+    afterAction: r.after_action as QueueRow['afterAction'], repeatMinutes: r.repeat_minutes as number | null,
   };
 }
 

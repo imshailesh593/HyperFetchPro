@@ -40,6 +40,8 @@ export interface QueueRow {
   /** Bit 0 = Sunday ... bit 6 = Saturday. 127 = every day. */
   days: number;
   afterAction: AfterAction;
+  /** Synchronization queues only: run again this many minutes after finishing, until the stop time. */
+  repeatMinutes: number | null;
 }
 
 export interface CategoryRow {

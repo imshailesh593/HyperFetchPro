@@ -139,3 +139,24 @@ describe('queues and categories api', () => {
     expect(await api.handle('category.delete', { id: c.id })).toEqual({ deleted: true });
   });
 });
+
+describe('quota and repeat settings', () => {
+  it('stores the download limit, reports it, and validates it', async () => {
+    await api.handle('settings.set', { quotaMb: 40, quotaHours: 1 });
+    const snap = (await api.handle('state.snapshot')) as any;
+    expect(snap.settings).toMatchObject({ quotaMb: 40, quotaHours: 1 });
+    expect(snap.quota).toMatchObject({ limitBytes: 40 * 1024 * 1024, windowMs: 3_600_000, blocked: false });
+    expect(events.some((e) => e.event === 'quota.changed')).toBe(true);
+    await expect(api.handle('settings.set', { quotaMb: -1 })).rejects.toThrow(/between 0 and/);
+    await expect(api.handle('settings.set', { quotaHours: 0 })).rejects.toThrow(/0.1 and 720/);
+    await api.handle('settings.set', { quotaMb: 0 });
+    expect(((await api.handle('state.snapshot')) as any).quota.limitBytes).toBe(0);
+  });
+
+  it('validates the repeat interval', async () => {
+    const q = (await api.handle('queue.add', { name: 'Sync', kind: 'sync', repeatMinutes: 30 })) as any;
+    expect(q.repeatMinutes).toBe(30);
+    expect(((await api.handle('queue.update', { id: q.id, repeatMinutes: null })) as any).repeatMinutes).toBeNull();
+    await expect(api.handle('queue.update', { id: q.id, repeatMinutes: 0 })).rejects.toThrow(/1 and 1440/);
+  });
+});

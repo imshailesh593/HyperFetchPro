@@ -39,6 +39,8 @@ export interface DownloadOptions {
   /** Skip the ETag / Last-Modified check when resuming. */
   ignoreModificationTime?: boolean;
   stateFlushMs?: number;
+  /** Called with the size of every chunk right after it is written (used for exact quota counting). */
+  onBytes?: (bytes: number) => void;
 }
 
 export interface ProgressInfo {

@@ -40,6 +40,8 @@ export class Api {
     const conns = Number(store.getSetting('maxConnections') ?? 8);
     this.manager.setGlobalSpeedLimit(limit);
     this.manager.setMaxConnections(conns);
+    this.applyQuota(Number(store.getSetting('quotaMb') ?? 0), Number(store.getSetting('quotaHours') ?? 1));
+    this.manager.on('quota', (q: unknown) => emit('quota.changed', q));
 
     this.manager.on('changed', (download: DownloadRow) => emit('download.changed', { download }));
     this.manager.on('removed', (id: number) => emit('download.removed', { id }));
@@ -53,6 +55,10 @@ export class Api {
       emit('queue.finished', { queueId, afterAction });
     });
     this.scheduler.start();
+  }
+
+  private applyQuota(mb: number, hours: number): void {
+    this.manager.setQuota(mb * 1024 * 1024, hours * 3_600_000);
   }
 
   private queues() {
@@ -92,7 +98,10 @@ export class Api {
             defaultDir: this.manager.defaultDir,
             speedLimit: Number(s.getSetting('speedLimit') ?? 0),
             maxConnections: Number(s.getSetting('maxConnections') ?? 8),
+            quotaMb: Number(s.getSetting('quotaMb') ?? 0),
+            quotaHours: Number(s.getSetting('quotaHours') ?? 1),
           },
+          quota: this.manager.quotaStatus(),
         };
 
       case 'download.add': {
@@ -193,6 +202,16 @@ export class Api {
           s.setSetting('maxConnections', String(num('maxConnections')));
           this.manager.setMaxConnections(num('maxConnections'));
         }
+        if (p.quotaMb !== undefined || p.quotaHours !== undefined) {
+          const mb = p.quotaMb !== undefined ? num('quotaMb') : Number(s.getSetting('quotaMb') ?? 0);
+          const hours = p.quotaHours !== undefined ? num('quotaHours') : Number(s.getSetting('quotaHours') ?? 1);
+          if (mb < 0 || mb > 10_000_000) throw new Error('The download limit must be between 0 and 10,000,000 MB (0 = off)');
+          if (hours < 0.1 || hours > 720) throw new Error('The limit period must be between 0.1 and 720 hours');
+          s.setSetting('quotaMb', String(mb));
+          s.setSetting('quotaHours', String(hours));
+          this.applyQuota(mb, hours);
+          this.emit('quota.changed', this.manager.quotaStatus());
+        }
         if (typeof p.defaultDir === 'string') {
           if (!path.isAbsolute(p.defaultDir)) throw new Error('The download folder must be a full path');
           s.setSetting('defaultDir', p.defaultDir);
@@ -259,6 +278,13 @@ function queueFields(p: Record<string, unknown>) {
     const d = Number(p.days);
     if (!Number.isInteger(d) || d < 0 || d > 127) throw new Error('days must be a number from 0 to 127');
     out.days = d;
+  }
+  if (p.repeatMinutes !== undefined) {
+    if (p.repeatMinutes !== null) {
+      const r = Number(p.repeatMinutes);
+      if (!Number.isInteger(r) || r < 1 || r > 1440) throw new Error('Repeat interval must be between 1 and 1440 minutes, or empty');
+      out.repeatMinutes = r;
+    } else out.repeatMinutes = null;
   }
   if (p.afterAction !== undefined) {
     if (!['none', 'exit', 'shutdown'].includes(p.afterAction as string)) throw new Error('afterAction must be none, exit or shutdown');

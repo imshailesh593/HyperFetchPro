@@ -81,6 +81,16 @@ describe('Downloader', () => {
     await expect(fs.stat(`${dest}.part.json`)).rejects.toThrow();
   });
 
+  it('reports every written byte through onBytes', async () => {
+    const dest = path.join(dir, 'counted.bin');
+    let counted = 0;
+    const d = new Downloader({ url: `${base}/ranged`, dest, maxConnections: 4, minSplitSize: 64 * 1024, onBytes: (n) => (counted += n) });
+    expect(await d.start()).toBe('completed');
+    // Counts bytes actually received: a split can make two connections fetch the same chunk, so slightly more.
+    expect(counted).toBeGreaterThanOrEqual(DATA.length);
+    expect(counted).toBeLessThan(DATA.length * 1.05);
+  });
+
   it('falls back to a single stream without range support', async () => {
     const dest = path.join(dir, 'plain.bin');
     const d = new Downloader({ url: `${base}/plain`, dest, maxConnections: 4 });
