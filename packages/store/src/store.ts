@@ -221,13 +221,25 @@ export class Store {
     return toCategory(this.one('SELECT * FROM categories WHERE id = ?', id)!);
   }
 
+  updateCategory(id: number, patch: { name?: string; extensions?: string[]; saveDir?: string | null }): CategoryRow | undefined {
+    const sets: string[] = [];
+    const params: SQLInputValue[] = [];
+    if (patch.name !== undefined) (sets.push('name = ?'), params.push(patch.name));
+    if (patch.extensions !== undefined) (sets.push('extensions = ?'), params.push(normalizeExtensions(patch.extensions).join(' ')));
+    if (patch.saveDir !== undefined) (sets.push('save_dir = ?'), params.push(patch.saveDir));
+    if (sets.length) this.run(`UPDATE categories SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
+    const r = this.one('SELECT * FROM categories WHERE id = ?', id);
+    return r && toCategory(r);
+  }
+
   deleteCategory(id: number): boolean {
     return this.run('DELETE FROM categories WHERE id = ?', id).changes > 0;
   }
 
   categoryForFilename(filename: string): CategoryRow | undefined {
     const ext = path.extname(filename).slice(1).toLowerCase();
-    return ext ? this.listCategories().find((c) => c.extensions.includes(ext)) : undefined;
+    // Newest first, so a category you create wins over a built-in one that lists the same type.
+    return ext ? this.listCategories().reverse().find((c) => c.extensions.includes(ext)) : undefined;
   }
 
   // --- settings ------------------------------------------------------------

@@ -48,7 +48,14 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `download.remove` | `id`, optional `deleteFiles` | `{}` (stops it first; `deleteFiles` removes the file and partial data) |
 | `downloads.pauseAll` / `downloads.resumeAll` | – | `{}` (resume starts paused, failed and queued rows) |
 | `queue.start` / `queue.stop` | `id` | `{}` |
-| `queue.update` | `id` plus any of `name, kind, maxParallel, startTime, stopTime, days, afterAction` | updated queue |
+| `queue.list` | – | queues with `running` |
+| `queue.add` | `name`, optional `kind` (`download`\|`sync`), `maxParallel` (1–10), `startTime`/`stopTime` (`HH:MM` or null), `days` (0–127), `afterAction` | the queue |
+| `queue.update` | `id` plus any of the same fields | updated queue (a time set to null clears it) |
+| `queue.delete` | `id` (not 1 or 2) | `{deleted}`; its downloads become unqueued |
+| `category.list` | – | categories |
+| `category.add` | `name`, `extensions` (array or space/comma string), optional `saveDir` (absolute) | the category |
+| `category.update` | `id` plus any of `name`, `extensions`, `saveDir` (`""`/null clears) | the category |
+| `category.delete` | `id` | `{deleted}` |
 | `settings.set` | any of `speedLimit` (bytes/s, 0 = unlimited), `maxConnections` (1–32), `defaultDir` | `{}` |
 | `media.status` | – | `{ytDlp:{path,version}\|null, ffmpeg:path\|null}` |
 | `media.install` | – | installs yt-dlp; `{path, sha256}` |
@@ -68,6 +75,7 @@ Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, 
 | `queue.changed` | `{queueId, running}` |
 | `queue.finished` | `{queueId, afterAction}`: the UI decides whether to exit or shut down |
 | `capture.added` | `{id}`: a browser download was handed over |
+| `queues.changed`, `categories.changed` | `{}`: reload the list |
 | `host.ready` | `{pid, dataDir}` |
 
 ## Local IPC (for the browser host)

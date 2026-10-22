@@ -52,6 +52,8 @@ public sealed partial class MainWindow : Window
         {
             Vm.OnEvent(name, data);
             if (name == "capture.added") Toast("Download taken over from your browser");
+            // A queue set to "exit when finished" closes the app once it has nothing left to do.
+            if (name == "queue.finished" && data.GetProperty("afterAction").GetString() == "exit") Close();
         });
         _core.Exited += reason => _ui.TryEnqueue(() => { Vm.MarkDisconnected(reason); UpdateEngineDot(); });
         Closed += (_, _) => _core.Dispose();
@@ -149,6 +151,17 @@ public sealed partial class MainWindow : Window
                 await Vm.AddAsync(dialog.Url, startNow, dialog.CategoryId, dialog.Folder, dialog.Headers);
             Toast(startNow ? "Download started" : "Added to the queue");
         });
+    }
+
+    private async void Scheduler_Click(object sender, RoutedEventArgs e)
+    {
+        await new SchedulerDialog(Content.XamlRoot, Vm).ShowAsync();
+    }
+
+    private async void EditCategories_Click(object sender, RoutedEventArgs e)
+    {
+        await new CategoriesDialog(this, Content.XamlRoot, Vm).ShowAsync();
+        await Run(Vm.RefreshCategoriesAsync); // pick up added, renamed and deleted categories
     }
 
     private async void Options_Click(object sender, RoutedEventArgs e)

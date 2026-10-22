@@ -9,6 +9,9 @@ describe('Store', () => {
     expect(s.listQueues().map((q) => q.id)).toEqual([MAIN_DOWNLOAD_QUEUE, MAIN_SYNC_QUEUE]);
     expect(s.categoryForFilename('Movie.MP4')?.name).toBe('Video');
     expect(s.categoryForFilename('notes.xyz')).toBeUndefined();
+    const books = s.addCategory({ name: 'Books', extensions: ['epub', 'txt'] });
+    expect(s.categoryForFilename('a.epub')?.id).toBe(books.id); // overlaps Documents: the newer category wins
+    expect(s.categoryForFilename('a.pdf')?.name).toBe('Documents');
   });
 
   it('round-trips downloads including headers', () => {
@@ -46,6 +49,9 @@ describe('Store', () => {
     const c = s.addCategory({ name: 'Books', extensions: ['.MOBI', 'azw3'] });
     expect(c.extensions).toEqual(['mobi', 'azw3']);
     expect(s.categoryForFilename('x.mobi')?.name).toBe('Books');
+    expect(s.updateCategory(c.id, { name: 'Reading', extensions: ['EPUB', '.mobi'], saveDir: 'D:/books' })).toMatchObject({ name: 'Reading', extensions: ['epub', 'mobi'], saveDir: 'D:/books' });
+    expect(s.updateCategory(c.id, { saveDir: null })?.saveDir).toBeNull();
+    expect(s.deleteCategory(c.id)).toBe(true);
 
     expect(s.getSetting('defaultDir')).toBeUndefined();
     s.setSetting('defaultDir', 'D:/dl');

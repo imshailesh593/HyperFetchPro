@@ -127,6 +127,13 @@
           </StackPanel>
         </Button>
 
+        <Button Style="{StaticResource RibbonButton}" Click="Scheduler_Click" AutomationProperties.Name="Scheduler">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <FontIcon Glyph="&#xE787;" FontSize="12" Foreground="{StaticResource PurpleBrush}" />
+            <TextBlock Text="Scheduler" />
+          </StackPanel>
+        </Button>
+
         <Rectangle Width="1" Height="18" Fill="{StaticResource HairlineBrush}" Margin="4,0" />
 
         <Button Style="{StaticResource RibbonButton}" Click="Options_Click" AutomationProperties.Name="Options"
@@ -214,7 +221,14 @@
             </StackPanel>
 
             <StackPanel>
-              <TextBlock Text="CATEGORIES" Style="{StaticResource SectionLabel}" Margin="8,4" />
+              <Grid>
+                <TextBlock Text="CATEGORIES" Style="{StaticResource SectionLabel}" Margin="8,4" VerticalAlignment="Center" />
+                <Button HorizontalAlignment="Right" Padding="6,2" Background="Transparent" BorderThickness="0"
+                        Click="EditCategories_Click" AutomationProperties.Name="Edit categories"
+                        ToolTipService.ToolTip="Edit categories">
+                  <FontIcon Glyph="&#xE70F;" FontSize="12" Foreground="{StaticResource DimTextBrush}" />
+                </Button>
+              </Grid>
               <ListView x:Name="CategoryList" SelectionMode="Single" SelectionChanged="Category_SelectionChanged"
                         ItemsSource="{x:Bind Vm.Categories}">
                 <ListView.ItemTemplate>

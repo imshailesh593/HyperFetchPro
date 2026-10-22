@@ -55,6 +55,10 @@ export class Api {
     this.scheduler.start();
   }
 
+  private queues() {
+    return this.store.listQueues().map((q) => ({ ...q, running: this.scheduler.isRunning(q.id) }));
+  }
+
   private requireMedia(): Media {
     if (!this.media) throw new Error('Video downloads are not available');
     return this.media;
@@ -82,7 +86,7 @@ export class Api {
       case 'state.snapshot':
         return {
           downloads: s.listDownloads(),
-          queues: s.listQueues().map((q) => ({ ...q, running: this.scheduler.isRunning(q.id) })),
+          queues: this.queues(),
           categories: s.listCategories(),
           settings: {
             defaultDir: this.manager.defaultDir,
@@ -135,9 +139,49 @@ export class Api {
       case 'queue.stop':
         this.scheduler.stopQueue(num('id'));
         return {};
+      case 'queue.list':
+        return this.queues();
+      case 'queue.add': {
+        const q = s.addQueue({ name: str('name'), ...queueFields(p) });
+        this.emit('queues.changed', {});
+        return { ...q, running: false };
+      }
       case 'queue.update': {
-        const { id, ...patch } = p as { id: number } & Record<string, never>;
-        return s.updateQueue(Number(id), patch) ?? null;
+        const id = num('id');
+        if (!s.getQueue(id)) throw new Error('No such queue');
+        const q = s.updateQueue(id, p.name !== undefined ? { name: str('name'), ...queueFields(p) } : queueFields(p));
+        this.emit('queues.changed', {});
+        return { ...q, running: this.scheduler.isRunning(id) };
+      }
+      case 'queue.delete': {
+        const id = num('id');
+        this.scheduler.stopQueue(id);
+        const ok = s.deleteQueue(id);
+        this.emit('queues.changed', {});
+        return { deleted: ok };
+      }
+
+      case 'category.list':
+        return s.listCategories();
+      case 'category.add': {
+        const c = s.addCategory({ name: str('name'), extensions: extList(p.extensions), saveDir: folderOrNull(p.saveDir) });
+        this.emit('categories.changed', {});
+        return c;
+      }
+      case 'category.update': {
+        const patch: { name?: string; extensions?: string[]; saveDir?: string | null } = {};
+        if (p.name !== undefined) patch.name = str('name');
+        if (p.extensions !== undefined) patch.extensions = extList(p.extensions);
+        if (p.saveDir !== undefined) patch.saveDir = folderOrNull(p.saveDir);
+        const c = s.updateCategory(num('id'), patch);
+        if (!c) throw new Error('No such category');
+        this.emit('categories.changed', {});
+        return c;
+      }
+      case 'category.delete': {
+        const ok = s.deleteCategory(num('id'));
+        this.emit('categories.changed', {});
+        return { deleted: ok };
       }
 
       case 'settings.set': {
@@ -190,4 +234,46 @@ export class Api {
 function webUrl(url: string): string {
   if (!/^https?:\/\//i.test(url)) throw new Error('Only http and https links are supported');
   return url;
+}
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Validates the optional queue fields shared by queue.add and queue.update. */
+function queueFields(p: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  if (p.kind !== undefined) {
+    if (p.kind !== 'download' && p.kind !== 'sync') throw new Error('Queue kind must be download or sync');
+    out.kind = p.kind;
+  }
+  if (p.maxParallel !== undefined) {
+    const n = Number(p.maxParallel);
+    if (!Number.isInteger(n) || n < 1 || n > 10) throw new Error('Parallel downloads must be between 1 and 10');
+    out.maxParallel = n;
+  }
+  for (const k of ['startTime', 'stopTime'] as const) {
+    if (p[k] === undefined) continue;
+    if (p[k] !== null && !(typeof p[k] === 'string' && TIME.test(p[k] as string))) throw new Error(`${k} must be HH:MM (24-hour) or null`);
+    out[k] = p[k];
+  }
+  if (p.days !== undefined) {
+    const d = Number(p.days);
+    if (!Number.isInteger(d) || d < 0 || d > 127) throw new Error('days must be a number from 0 to 127');
+    out.days = d;
+  }
+  if (p.afterAction !== undefined) {
+    if (!['none', 'exit', 'shutdown'].includes(p.afterAction as string)) throw new Error('afterAction must be none, exit or shutdown');
+    out.afterAction = p.afterAction;
+  }
+  return out;
+}
+
+function extList(v: unknown): string[] {
+  const list = Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\s,]+/) : [];
+  return list.filter((e): e is string => typeof e === 'string' && e.trim() !== '');
+}
+
+function folderOrNull(v: unknown): string | null {
+  if (v === null || v === '' || v === undefined) return null;
+  if (typeof v !== 'string' || !path.isAbsolute(v)) throw new Error('The folder must be a full path');
+  return v;
 }

@@ -53,18 +53,27 @@ The Turbo button switches between **8** connections per download (default) and *
 
 The sidebar slider sets a **total** limit in MB/s from 10 to 199. At the far right it is **Unlimited**. The limit is shared evenly by running downloads and takes effect about half a second after you stop moving the slider. It is remembered.
 
-## Queues
+## Queues and the Scheduler
 
-- Downloads added with **Add to queue** go to the **Main download queue**, which runs one download at a time by default.
-- **Start queue** runs it; **Stop queue** pauses what is running (it resumes on the next start).
-- Failed downloads are moved to the back of the queue and retried after 30 seconds, up to 20 attempts, then stay *Failed* with the error shown.
-- Finished downloads leave the download queue and remain in the list.
-- The **synchronization queue** re-checks its files each run and downloads again only if the server's version changed.
-- Start and stop times, days of week, extra queues and parallel limits exist in the core; the Scheduler screen for them is *(planned)*.
+- Downloads added with **Add to queue** go to the **Main download queue**.
+- **Start queue** / **Stop queue** in the ribbon run or stop the main queue. Stopping pauses what is running; the next start resumes it.
+- Failed downloads move to the back of the queue and are retried after 30 seconds, up to 20 attempts, then stay *Failed* with the error shown. Finished downloads leave a download queue but stay in the list.
+- A **synchronization queue** keeps its files and, each run, downloads again only those that changed on the server.
+
+Open **Scheduler** in the ribbon to manage queues. Pick a queue on the left, or create a **New queue** (download or synchronization). For each queue you can set:
+
+- **Name** and **files downloaded at the same time** (1 to 10).
+- **Start at** and **Stop at** (24-hour times) and the **days** they apply to. The app must be running at that time. A schedule fires once per minute match; stopping by hand inside that minute is not undone.
+- **When the queue finishes:** do nothing, or exit the application. (A shut-down option exists in the core but is not offered in the UI.)
+- **Apply** saves; **Start now** and **Stop** control the queue immediately.
+
+Deleting a custom queue keeps its downloads in the list, just unqueued. The two main queues cannot be deleted. Repeat intervals for synchronization and download quotas (for example 40 MB per hour) are *(planned)*.
 
 ## Categories
 
-Default categories: Compressed, Documents, Music, Programs, Video. A download goes to `<default folder>\<category name>` unless you pick a folder. Editing categories and extensions is *(planned)* in the UI.
+Default categories: Compressed, Documents, Music, Programs, Video. A download goes to `<default folder>\<category name>` unless you pick a folder, or the category has its own folder.
+
+Click the pencil next to **CATEGORIES** in the sidebar to edit them: change the name, the file types (extensions separated by spaces) and an optional save folder (a full path; blank = a folder named after the category), add a **New category**, or delete one. If two categories list the same type, the newer one wins. Deleting a category does not touch files; its downloads just lose the label. Existing downloads are not moved when you change a folder.
 
 ## Browser capture
 

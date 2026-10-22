@@ -109,3 +109,33 @@ describe('media api', () => {
     await expect(api.handle('media.info', { url: 'https://x/y' })).rejects.toThrow(/not available/);
   });
 });
+
+describe('queues and categories api', () => {
+  it('creates, validates, updates and deletes queues', async () => {
+    const q = (await api.handle('queue.add', { name: 'Night', startTime: '02:00', stopTime: '06:30', days: 62, maxParallel: 3 })) as any;
+    expect(q).toMatchObject({ name: 'Night', startTime: '02:00', stopTime: '06:30', days: 62, maxParallel: 3, running: false });
+    expect(events.some((e) => e.event === 'queues.changed')).toBe(true);
+
+    const u = (await api.handle('queue.update', { id: q.id, stopTime: null, afterAction: 'exit' })) as any;
+    expect(u).toMatchObject({ stopTime: null, afterAction: 'exit', startTime: '02:00' });
+
+    await expect(api.handle('queue.update', { id: q.id, startTime: '25:00' })).rejects.toThrow(/HH:MM/);
+    await expect(api.handle('queue.update', { id: q.id, maxParallel: 0 })).rejects.toThrow(/between 1 and 10/);
+    await expect(api.handle('queue.update', { id: q.id, days: 200 })).rejects.toThrow(/0 to 127/);
+    await expect(api.handle('queue.update', { id: 999, maxParallel: 2 })).rejects.toThrow(/No such queue/);
+    await expect(api.handle('queue.delete', { id: 1 })).rejects.toThrow(/main queues/);
+
+    expect(((await api.handle('queue.list')) as any[]).map((x) => x.id)).toContain(q.id);
+    expect(await api.handle('queue.delete', { id: q.id })).toEqual({ deleted: true });
+  });
+
+  it('manages categories', async () => {
+    const c = (await api.handle('category.add', { name: 'Books', extensions: '.epub mobi, azw3' })) as any;
+    expect(c.extensions).toEqual(['epub', 'mobi', 'azw3']);
+    const u = (await api.handle('category.update', { id: c.id, saveDir: dir, name: 'Reading' })) as any;
+    expect(u).toMatchObject({ name: 'Reading', saveDir: dir });
+    await expect(api.handle('category.update', { id: c.id, saveDir: 'relative' })).rejects.toThrow(/full path/);
+    expect(((await api.handle('category.update', { id: c.id, saveDir: '' })) as any).saveDir).toBeNull();
+    expect(await api.handle('category.delete', { id: c.id })).toEqual({ deleted: true });
+  });
+});

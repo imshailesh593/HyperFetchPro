@@ -37,6 +37,13 @@ public sealed class QueueDto
     public string Kind { get; set; } = "download";
     public int MaxParallel { get; set; }
     public bool Running { get; set; }
+    public string? StartTime { get; set; }
+    public string? StopTime { get; set; }
+    /// <summary>Bit 0 = Sunday ... bit 6 = Saturday.</summary>
+    public int Days { get; set; } = 127;
+    public string AfterAction { get; set; } = "none";
+
+    public override string ToString() => Running ? $"{Name}  (running)" : Name;
 }
 
 public sealed class CategoryDto
@@ -45,6 +52,8 @@ public sealed class CategoryDto
     public string Name { get; set; } = "";
     public List<string> Extensions { get; set; } = [];
     public string? SaveDir { get; set; }
+
+    public override string ToString() => Name;
 }
 
 public sealed class SettingsDto

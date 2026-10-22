@@ -218,6 +218,41 @@ public sealed class MainViewModel : Observable
         await _core.CallAsync("settings.set", new { speedLimit = mb >= UnlimitedSliderValue ? 0 : (long)(mb * 1048576) });
     }
 
+    // --- queues and categories ---------------------------------------------------------
+
+    public Task<List<QueueDto>> ListQueuesAsync() => _core.CallAsync<List<QueueDto>>("queue.list");
+    public Task<QueueDto> AddQueueAsync(string name, string kind) => _core.CallAsync<QueueDto>("queue.add", new { name, kind });
+    public Task<QueueDto> UpdateQueueAsync(object fields) => _core.CallAsync<QueueDto>("queue.update", fields);
+    public Task DeleteQueueAsync(int id) => _core.CallAsync("queue.delete", new { id });
+    public Task StartQueueAsync(int id) => _core.CallAsync("queue.start", new { id });
+    public Task StopQueueAsync(int id) => _core.CallAsync("queue.stop", new { id });
+
+    public Task<List<CategoryDto>> ListCategoriesAsync() => _core.CallAsync<List<CategoryDto>>("category.list");
+    public Task<CategoryDto> AddCategoryAsync(string name, string extensions, string? saveDir) =>
+        _core.CallAsync<CategoryDto>("category.add", new { name, extensions, saveDir });
+    public Task<CategoryDto> UpdateCategoryAsync(int id, string name, string extensions, string? saveDir) =>
+        _core.CallAsync<CategoryDto>("category.update", new { id, name, extensions, saveDir = saveDir ?? "" });
+    public Task DeleteCategoryAsync(int id) => _core.CallAsync("category.delete", new { id });
+
+    /// <summary>Reloads the category list after the editor changed it.</summary>
+    public async Task RefreshCategoriesAsync()
+    {
+        var list = await ListCategoriesAsync();
+        CategoryList = list;
+        _categoryNames.Clear();
+        Categories.Clear();
+        foreach (var c in list)
+        {
+            _categoryNames[c.Id] = c.Name;
+            Categories.Add(new CategoryEntry { Id = c.Id, Name = c.Name, Glyph = GlyphFor(c.Name) });
+        }
+        if (_categoryFilter is { } f && !_categoryNames.ContainsKey(f)) { _categoryFilter = null; }
+        // Rows keep their category id; refresh names and counts.
+        var snap = await _core.CallAsync<SnapshotDto>("state.snapshot");
+        foreach (var dto in snap.Downloads) _all.FirstOrDefault(i => i.Id == dto.Id)?.Apply(dto, CategoryName);
+        Refresh();
+    }
+
     // --- options ---------------------------------------------------------------------
 
     /// <summary>Saves the Options dialog. A speed of 0 (or the slider maximum) means unlimited.</summary>
