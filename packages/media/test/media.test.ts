@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Media, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
+import { Media, ProgressTracker, parsePlan, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
 
 const fake = fileURLToPath(new URL('./fake-ytdlp.mjs', import.meta.url));
 const launch = { binary: process.execPath, prefix: [fake], ffmpeg: null as string | null };
@@ -22,6 +22,38 @@ describe('parsing', () => {
     expect(() => infoArgs('file:///c:/x')).toThrow();
     expect(() => infoArgs('--exec=calc')).toThrow();
     expect(infoArgs('https://a/b').slice(-2)).toEqual(['--', 'https://a/b']);
+  });
+});
+
+describe('progress across streams', () => {
+  it('parses the stream id and the plan', () => {
+    expect(parseProgress('DMPROG:5|10|NA|2|137')).toEqual({ downloaded: 5, size: 10, speed: 2, stream: '137' });
+    expect(parsePlan('DMPLAN:[{"filesize":1000},{"filesize_approx":500}]')).toBe(1500);
+    expect(parsePlan('DMPLAN:[{"filesize":1000},{}]')).toBeNull(); // one unknown size: no reliable total
+    expect(parsePlan('DMPLAN:null')).toBeNull();
+    expect(parsePlan('DMPLAN:not json')).toBeNull();
+  });
+
+  it('keeps counting up when the audio stream starts (with a plan)', () => {
+    const t = new ProgressTracker();
+    t.plan = 1500;
+    const out = [
+      t.update({ downloaded: 500, size: 1000, speed: 1, stream: 'v' }),
+      t.update({ downloaded: 1000, size: 1000, speed: 1, stream: 'v' }),
+      t.update({ downloaded: 100, size: 500, speed: 1, stream: 'a' }),
+      t.update({ downloaded: 500, size: 500, speed: 1, stream: 'a' }),
+    ];
+    expect(out.map((o) => o.downloaded)).toEqual([500, 1000, 1100, 1500]);
+    expect(out.every((o) => o.size === 1500)).toBe(true);
+  });
+
+  it('still works without a plan or stream ids (a drop means a new stream)', () => {
+    const t = new ProgressTracker();
+    const a = t.update({ downloaded: 900, size: 1000, speed: 1 });
+    const b = t.update({ downloaded: 100, size: 400, speed: 1 });
+    expect(a).toMatchObject({ downloaded: 900, size: 1000 });
+    expect(b.downloaded).toBe(1000 + 100); // previous stream ended at its size
+    expect(b.size).toBe(1000 + 400);
   });
 });
 
@@ -53,6 +85,17 @@ describe('Media', () => {
     expect(progress).toEqual([100, 200, 300]);
     expect(name).toBe('clip.mp4');
     expect(await fs.readFile(path.join(dir, 'clip.mp4'), 'utf8')).toBe('video-bytes');
+  });
+
+  it('reports one continuous progress for a video + audio download', async () => {
+    const d = new Media(dir, launch).downloader({ url: 'https://x/two', dir, stem: 'merged', format: 'bv*+ba/b' });
+    const seen: Array<{ downloaded: number; size: number | null }> = [];
+    d.on('progress', (p) => seen.push({ downloaded: p.downloaded, size: p.size }));
+    expect(await d.start()).toBe('completed');
+    const bytes = seen.map((s) => s.downloaded);
+    expect(bytes).toEqual([...bytes].sort((a, b) => a - b)); // never goes backwards
+    expect(bytes.at(-1)).toBe(1500);
+    expect(seen.every((s) => s.size === 1500)).toBe(true);
   });
 
   it('pauses a running download', async () => {

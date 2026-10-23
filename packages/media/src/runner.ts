@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
-import { FILE_PREFIX, PROGRESS_TEMPLATE, parseProgress } from './info.js';
+import { FILE_PREFIX, PLAN_PREFIX, PROGRESS_TEMPLATE, ProgressTracker, parsePlan, parseProgress } from './info.js';
 
 export interface Launch {
   binary: string;
@@ -93,10 +93,11 @@ export class MediaDownloader extends EventEmitter {
     const { job, launch } = this;
     const args = [
       ...(launch.prefix ?? []),
-      '--no-playlist', '--newline', '--no-colors', '--no-warnings', '--no-simulate', '--continue',
+      '--no-playlist', '--newline', '--no-colors', '--no-warnings', '--no-simulate', '--progress', '--continue',
       '-f', job.format,
       '-o', path.join(job.dir, `${job.stem}.%(ext)s`),
       '--progress-template', PROGRESS_TEMPLATE,
+      '--print', `before_dl:${PLAN_PREFIX}%(requested_formats)j`,
       '--print', `after_move:${FILE_PREFIX}%(filepath)s`,
       ...(launch.ffmpeg ? ['--ffmpeg-location', launch.ffmpeg, '--merge-output-format', 'mp4'] : []),
       ...headerArgs(job.headers),
@@ -107,6 +108,7 @@ export class MediaDownloader extends EventEmitter {
       const child = spawn(launch.binary, args, { windowsHide: true });
       this.child = child;
       let file: string | null = null;
+      const tracker = new ProgressTracker();
       let err = '';
       let buf = '';
       child.stdout.setEncoding('utf8').on('data', (d: string) => {
@@ -116,7 +118,8 @@ export class MediaDownloader extends EventEmitter {
           const line = buf.slice(0, nl).trim();
           buf = buf.slice(nl + 1);
           const p = parseProgress(line);
-          if (p) this.emit('progress', { downloaded: p.downloaded, size: p.size, speed: p.speed, segments: [] });
+          if (p) this.emit('progress', { ...tracker.update(p), segments: [] });
+          else if (line.startsWith(PLAN_PREFIX)) tracker.plan = parsePlan(line);
           else if (line.startsWith(FILE_PREFIX)) file = line.slice(FILE_PREFIX.length);
         }
       });

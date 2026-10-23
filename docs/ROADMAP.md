@@ -10,11 +10,12 @@
 - Download limit (quota) with exact per-chunk counting in the engine, automatic resume after the period, persistence across restarts, queue-aware holding; sync queue repeat interval.
 - Packaging: self-contained build with bundled Node, per-user `Setup.exe` (Inno Setup) and zip; installing, running without Node on PATH, browser registration and uninstalling were verified.
 - WinUI 3 app with the supplied design, including the video flow in the Add dialog (verified by driving the real UI: link from clipboard, Find video, download to a finished mp4).
+- Video progress is one continuous figure across the video and audio streams (checked against the real yt-dlp: 18 updates, total matched the sum of both streams).
 - Media backend: format list, runner with pause/resume, checksum-verified yt-dlp installer (verified against the real release and a real public video), ffmpeg installer. Both were run against the real releases, and a real public video was downloaded, merged and checked with ffmpeg (19 s, video + audio, mp4).
 
 ## Next (suggested order)
 
-1. **Video polish:** progress that spans video + audio, playlists, yt-dlp update button / auto-update, more sites tested (Instagram, private content).
+1. **Video polish:** playlists, yt-dlp auto-update, more sites tested (Instagram, private content).
 2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app, auto-update of yt-dlp.
 3. **Release polish:** code signing, app icon and version info, auto-update (the app and yt-dlp), MSIX or winget package.
 4. **macOS app** (SwiftUI) over the same protocol; native-messaging manifests for macOS browsers; signing/notarization.
@@ -27,7 +28,6 @@
 - Not yet tried against real internet servers beyond the yt-dlp/GitHub requests; engine tests use local servers.
 - The extension was verified in Edge only (see BROWSER-INTEGRATION.md); Chrome, Brave and Firefox are untried, and only a direct file link was tested (no referrer, no login-protected site).
 - Only one site/video was tried for real (a short public YouTube clip). Instagram, private content and playlists are untested.
-- Media progress is reported per stream, so video+audio downloads show progress restarting between streams.
 - Proxy, FTP, checksums, and per-site connection limits are not implemented.
 - The download limit can overshoot by roughly (connections x chunk size) = about 1 to 2 MB; video (yt-dlp) downloads are counted from progress reports and can overshoot more. The period is a fixed window from the first byte, not a rolling one. Only unit tests cover the automatic resume after a period (the shortest period is 6 minutes).
 - Speed limit is divided evenly between running downloads (not by need).

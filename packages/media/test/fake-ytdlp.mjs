@@ -16,10 +16,22 @@ if (a.includes('-J')) {
 }
 const o = a[a.indexOf('-o') + 1];
 const out = o.replace('%(ext)s', 'mp4');
+// Like the real yt-dlp: --print makes it quiet, so progress only appears with --progress.
+const showProgress = a.includes('--progress');
 if (kind === 'fail') { console.error('ERROR: Video unavailable'); process.exit(1); }
+if (kind === 'two') {
+  // video stream (1000 bytes) then audio stream (500 bytes), like a merged download
+  console.log('DMPLAN:' + JSON.stringify([{ filesize: 1000 }, { filesize_approx: 500 }]));
+  for (const [id, total] of [['137', 1000], ['140', 500]]) {
+    for (let d = total / 5; d <= total; d += total / 5) if (showProgress) console.log(`DMPROG:${d}|${total}|NA|100|${id}`);
+  }
+  fs.writeFileSync(out, 'video-bytes');
+  console.log('DMFILE:' + out);
+  process.exit(0);
+}
 const steps = kind === 'slow' ? 100 : 3;
 for (let i = 1; i <= steps; i++) {
-  console.log(`DMPROG:${i * 100}|${steps * 100}|NA|2048.5`);
+  if (showProgress) console.log(`DMPROG:${i * 100}|${steps * 100}|NA|2048.5`);
   await new Promise((r) => setTimeout(r, kind === 'slow' ? 50 : 5));
 }
 fs.writeFileSync(out, 'video-bytes');

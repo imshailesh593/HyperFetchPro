@@ -76,17 +76,71 @@ export function simplify(raw: Record<string, any>, canMerge: boolean): MediaInfo
 
 export const PROGRESS_PREFIX = 'DMPROG:';
 export const FILE_PREFIX = 'DMFILE:';
-export const PROGRESS_TEMPLATE = `download:${PROGRESS_PREFIX}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s`;
+export const PLAN_PREFIX = 'DMPLAN:';
+export const PROGRESS_TEMPLATE = `download:${PROGRESS_PREFIX}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(info.format_id)s`;
 
 const num = (s: string): number | null => {
   const n = Number(s);
   return s && s !== 'NA' && s !== 'None' && Number.isFinite(n) ? n : null;
 };
 
-export function parseProgress(line: string): { downloaded: number; size: number | null; speed: number } | null {
+export interface ProgressLine {
+  downloaded: number;
+  size: number | null;
+  speed: number;
+  /** Which stream this is (video and audio are separate streams); undefined if not reported. */
+  stream?: string;
+}
+
+export function parseProgress(line: string): ProgressLine | null {
   if (!line.startsWith(PROGRESS_PREFIX)) return null;
-  const [d, total, est, speed] = line.slice(PROGRESS_PREFIX.length).trim().split('|');
-  return { downloaded: num(d) ?? 0, size: num(total) ?? num(est), speed: num(speed) ?? 0 };
+  const [d, total, est, speed, stream] = line.slice(PROGRESS_PREFIX.length).trim().split('|');
+  const id = stream && stream !== 'NA' && stream !== 'None' ? stream : undefined;
+  return { downloaded: num(d) ?? 0, size: num(total) ?? num(est), speed: num(speed) ?? 0, stream: id };
+}
+
+/** Total bytes of all streams yt-dlp is about to fetch, from its `requested_formats` JSON; null if unknown. */
+export function parsePlan(line: string): number | null {
+  if (!line.startsWith(PLAN_PREFIX)) return null;
+  try {
+    const list = JSON.parse(line.slice(PLAN_PREFIX.length)) as Array<{ filesize?: number | null; filesize_approx?: number | null }> | null;
+    if (!Array.isArray(list) || list.length === 0) return null;
+    let sum = 0;
+    for (const f of list) {
+      const n = f.filesize ?? f.filesize_approx;
+      if (!n) return null; // one stream without a size makes the total unreliable
+      sum += n;
+    }
+    return sum > 0 ? sum : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Turns per-stream progress into one figure for the whole video: when the stream changes, what the
+ * previous stream finished with is added to a running offset. `plan` (total of all streams) is used as
+ * the overall size when known, otherwise the size seen so far.
+ */
+export class ProgressTracker {
+  private offset = 0;
+  private stream: string | undefined;
+  private last = 0;
+  private lastSize: number | null = null;
+  plan: number | null = null;
+
+  update(p: ProgressLine): { downloaded: number; size: number | null; speed: number } {
+    const switched = this.stream !== undefined && p.stream !== undefined && p.stream !== this.stream;
+    // Without stream ids, a drop in the byte count also means a new stream began.
+    const dropped = p.stream === undefined && p.downloaded < this.last;
+    if (switched || dropped) this.offset += this.lastSize ?? this.last;
+    this.stream = p.stream ?? this.stream;
+    this.last = p.downloaded;
+    this.lastSize = p.size ?? this.lastSize;
+    const downloaded = this.offset + p.downloaded;
+    const size = this.plan ?? (p.size !== null ? this.offset + p.size : null);
+    return { downloaded, size: size !== null ? Math.max(size, downloaded) : null, speed: p.speed };
+  }
 }
 
 const BAD = /[\\/:*?"<>|\x00-\x1f]/g;
