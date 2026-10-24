@@ -4,7 +4,7 @@ A fast, resumable download manager for Windows (macOS planned) with a **native U
 
 Everything runs on your own computer. There is no server, no account and no telemetry.
 
-> Working name in the code and window title is "Download Manager"; "HyperFetch Pro" is the product name used in this documentation.
+> **HyperFetch Pro** is the product name (window title, installer, extension, icon). The code, executable (`DownloadManager.exe`), data folder (`%APPDATA%\DownloadManager`) and native-host id still use the earlier working name "Download Manager"; renaming them would break existing installs and is deliberately left alone.
 
 ## Status
 
@@ -19,7 +19,7 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Options screen (folder, connections, speed limit, video tools install/update) | Done, verified through the real UI |
 | Download limit (quota, for example 40 MB per hour) and sync repeat interval | Done in the core with tests; limit verified in the real app (downloads held, status-bar notice). Resuming after the period is covered by unit tests only |
 | Scheduler (queues, start/stop times, days, parallel limits) and category editor | Done, verified through the real UI. "Exit when finished" is implemented but not yet tried |
-| Packaging and installer | Done: self-contained build with bundled Node, `Setup.exe` (per-user, no admin), zip. Install, run and uninstall verified. Unsigned. Auto-update not built |
+| Packaging and installer | Done: self-contained build with bundled Node, `Setup.exe` (per-user, no admin), zip, app icon and version info. Install, run and uninstall verified. Unsigned. Auto-update not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
 | Firefox, Android | Not started |
 

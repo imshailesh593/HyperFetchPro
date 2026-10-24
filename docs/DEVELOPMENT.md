@@ -89,6 +89,12 @@ msedge --user-data-dir="$env:TEMP\edge-profile" --load-extension="<repo>pps\ext
 
 Serve a file that is large enough (tens of MB) and throttled, with `Content-Disposition: attachment` and range support; a tiny file finishes in the browser before the extension can pause it. Build header objects before `writeHead` (Node throws if you `setHeader` after it).
 
+## Icons and branding
+
+`scripts\make-icons.ps1` draws the icon from code (gradient rounded square, white download arrow) and writes `Assetspp.ico` (7 sizes, PNG-compressed), `Assets\logo.png` and the extension's `icons\icon{16,32,48,128}.png`. Re-run it after changing the design and commit the outputs. `System.Drawing.Icon` cannot read PNG-compressed `.ico` files; check them with the Windows shell (`ExtractAssociatedIcon` on the built exe) or by parsing the file. In PowerShell variable names are case-insensitive: a loop variable `$s` overwrites `$S`.
+
+The csproj sets `ApplicationIcon`, product/company/description and copies `Assets` to the output; `MainWindow` calls `AppWindow.SetIcon` for the taskbar and Alt+Tab icon. The installer uses the same icon (`SetupIconFile`). The executable and internal identifiers keep the earlier working name on purpose.
+
 ## Packaging
 
 ```powershell

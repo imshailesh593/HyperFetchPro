@@ -8,6 +8,7 @@
 - Options dialog (folder, connections, speed limit, video-tool status/install/update), verified through the real UI.
 - Scheduler and category editor dialogs, verified through the real UI (queue created with 3 parallel downloads and a 02:00–06:00 schedule; category created and persisted).
 - Download limit (quota) with exact per-chunk counting in the engine, automatic resume after the period, persistence across restarts, queue-aware holding; sync queue repeat interval.
+- Branding: product name HyperFetch Pro in the window, installer and extension, generated app icon (exe, taskbar, installer, title bar, extension toolbar) and version info; verified in the built app and installer.
 - Packaging: self-contained build with bundled Node, per-user `Setup.exe` (Inno Setup) and zip; installing, running without Node on PATH, browser registration and uninstalling were verified.
 - WinUI 3 app with the supplied design, including the video flow in the Add dialog (verified by driving the real UI: link from clipboard, Find video, download to a finished mp4).
 - Playlists and channels: listed flat (fast), a checklist in the Add dialog, one quality for all selected videos, added to the main queue (verified with the real yt-dlp and in the real UI on a one-video channel; multi-video behaviour covered by tests with a fake yt-dlp).
@@ -18,7 +19,7 @@
 
 1. **Video polish:** yt-dlp auto-update, more sites tested (Instagram, private content), a download-all button for long playlists with per-video quality.
 2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app, auto-update of yt-dlp.
-3. **Release polish:** code signing, app icon and version info, auto-update (the app and yt-dlp), MSIX or winget package.
+3. **Release polish:** code signing, auto-update (the app and yt-dlp), MSIX or winget package.
 4. **macOS app** (SwiftUI) over the same protocol; native-messaging manifests for macOS browsers; signing/notarization.
 5. **Firefox** extension; stream/video sniffing in the extension; Alt-key bypass.
 6. **Site Grabber** (crawler with filters), FTP downloading in the engine, proxy support, site logins stored in the OS credential store, antivirus hook, CLI.
@@ -32,7 +33,7 @@
 - Proxy, FTP, checksums, and per-site connection limits are not implemented.
 - The download limit can overshoot by roughly (connections x chunk size) = about 1 to 2 MB; video (yt-dlp) downloads are counted from progress reports and can overshoot more. The period is a fixed window from the first byte, not a rolling one. Only unit tests cover the automatic resume after a period (the shortest period is 6 minutes).
 - Speed limit is divided evenly between running downloads (not by need).
-- The installer is unsigned (SmartScreen warning) and the app has no custom icon yet.
+- The installer is unsigned (SmartScreen warning). The icon is a simple generated design; a designer's version could replace it.
 - Segment state lives in a `.part.json` beside each download rather than in the database.
 - Windows only; ffmpeg auto-install is Windows only.
 - No license chosen yet.

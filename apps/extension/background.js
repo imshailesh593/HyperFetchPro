@@ -1,4 +1,4 @@
-const HOST = 'com.downloadmanager.host';
+﻿const HOST = 'com.downloadmanager.host';
 
 const DEFAULTS = {
   enabled: true,
@@ -92,9 +92,9 @@ chrome.downloads.onCreated.addListener((item) => {
   hand(item).catch(() => {});
 });
 
-// Right-click any link or media element: "Download with Download Manager".
+// Right-click any link or media element: "Download with HyperFetch Pro".
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus?.create?.({ id: 'dm-link', title: 'Download with Download Manager', contexts: ['link', 'video', 'audio'] });
+  chrome.contextMenus?.create?.({ id: 'dm-link', title: 'Download with HyperFetch Pro', contexts: ['link', 'video', 'audio'] });
 });
 chrome.contextMenus?.onClicked.addListener(async (info) => {
   const url = info.linkUrl || info.srcUrl;

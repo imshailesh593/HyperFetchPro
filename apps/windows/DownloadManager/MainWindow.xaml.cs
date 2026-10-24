@@ -29,6 +29,8 @@ public sealed partial class MainWindow : Window
         Vm = new MainViewModel(_core);
         InitializeComponent();
 
+        var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+        if (File.Exists(icon)) AppWindow.SetIcon(icon); // taskbar and Alt+Tab icon
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(TitleBarGrid);
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1320, 820));

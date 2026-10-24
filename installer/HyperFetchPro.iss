@@ -21,6 +21,7 @@ OutputBaseFilename=HyperFetchPro-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\apps\windows\DownloadManager\Assets\app.ico
 UninstallDisplayName=HyperFetch Pro
 UninstallDisplayIcon={app}\DownloadManager.exe
 CloseApplications=yes
