@@ -13,11 +13,12 @@ export class Api {
   readonly manager: DownloadManager;
   readonly scheduler: Scheduler;
   private readonly media?: Media;
+  private updateTimers: NodeJS.Timeout[] = [];
 
   constructor(
     private readonly store: Store,
     private readonly emit: (event: string, data: unknown) => void,
-    deps: { manager?: DownloadManager; scheduler?: Scheduler; media?: Media } = {},
+    deps: { manager?: DownloadManager; scheduler?: Scheduler; media?: Media; autoUpdateDelayMs?: number | null } = {},
   ) {
     // A crash can leave rows marked running; nothing is running at startup.
     for (const d of store.listDownloads({ status: 'running' })) store.updateDownload(d.id, { status: 'paused' });
@@ -55,6 +56,8 @@ export class Api {
       emit('queue.finished', { queueId, afterAction });
     });
     this.scheduler.start();
+    // null switches the background check off (tests); the app checks shortly after start and every 6 hours.
+    if (deps.media && deps.autoUpdateDelayMs !== null) this.startAutoUpdate(deps.autoUpdateDelayMs ?? 20_000);
   }
 
   private applyQuota(mb: number, hours: number): void {
@@ -70,7 +73,42 @@ export class Api {
     return this.media;
   }
 
+  /**
+   * Keeps yt-dlp current: at most one check a day, only when yt-dlp is installed, automatic updates are not
+   * switched off, and no video is downloading (the running file cannot be replaced). Returns what happened.
+   */
+  async autoUpdate(now = Date.now()): Promise<{ checked: boolean; updated?: { from: string | null; to: string }; reason?: string }> {
+    const media = this.media;
+    if (!media) return { checked: false, reason: 'no video support' };
+    if (this.store.getSetting('autoUpdateYtDlp') === '0') return { checked: false, reason: 'turned off' };
+    if (now - Number(this.store.getSetting('ytdlpCheckedAt') ?? 0) < 24 * 3_600_000) return { checked: false, reason: 'checked recently' };
+    if (!(await media.status()).ytDlp) return { checked: false, reason: 'not installed' };
+    if (this.store.listDownloads({ status: 'running' }).some((d) => d.kind === 'media')) return { checked: false, reason: 'a video is downloading' };
+    try {
+      const r = await media.updateYtDlp();
+      this.store.setSetting('ytdlpCheckedAt', String(now));
+      if (r.updated) {
+        this.emit('media.updated', { from: r.from, to: r.to });
+        return { checked: true, updated: { from: r.from, to: r.to } };
+      }
+      return { checked: true };
+    } catch (e) {
+      return { checked: false, reason: e instanceof Error ? e.message : String(e) }; // offline or GitHub unreachable: try again later
+    }
+  }
+
+  private startAutoUpdate(delayMs: number): void {
+    const run = () => void this.autoUpdate().catch(() => undefined);
+    const first = setTimeout(run, delayMs);
+    const every = setInterval(run, 6 * 3_600_000);
+    first.unref();
+    every.unref();
+    this.updateTimers.push(first, every);
+  }
+
   async shutdown(): Promise<void> {
+    for (const t of this.updateTimers) clearTimeout(t);
+    this.updateTimers = [];
     this.scheduler.dispose();
     await this.manager.shutdown();
   }
@@ -100,6 +138,7 @@ export class Api {
             maxConnections: Number(s.getSetting('maxConnections') ?? 8),
             quotaMb: Number(s.getSetting('quotaMb') ?? 0),
             quotaHours: Number(s.getSetting('quotaHours') ?? 1),
+            autoUpdateYtDlp: s.getSetting('autoUpdateYtDlp') !== '0',
           },
           quota: this.manager.quotaStatus(),
         };
@@ -212,6 +251,7 @@ export class Api {
           this.applyQuota(mb, hours);
           this.emit('quota.changed', this.manager.quotaStatus());
         }
+        if (p.autoUpdateYtDlp !== undefined) s.setSetting('autoUpdateYtDlp', p.autoUpdateYtDlp === false ? '0' : '1');
         if (typeof p.defaultDir === 'string') {
           if (!path.isAbsolute(p.defaultDir)) throw new Error('The download folder must be a full path');
           s.setSetting('defaultDir', p.defaultDir);
@@ -223,6 +263,8 @@ export class Api {
         return this.requireMedia().status();
       case 'media.install':
         return this.requireMedia().install();
+      case 'media.update':
+        return this.requireMedia().updateYtDlp();
       case 'media.installFfmpeg':
         return this.requireMedia().installFfmpeg();
       case 'media.info':

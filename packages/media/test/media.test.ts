@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Media, ProgressTracker, parsePlan, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
+import { Media, ProgressTracker, compareVersions, latestYtDlpVersion, parsePlan, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
 
 const fake = fileURLToPath(new URL('./fake-ytdlp.mjs', import.meta.url));
 const launch = { binary: process.execPath, prefix: [fake], ffmpeg: null as string | null };
@@ -29,6 +29,25 @@ describe('parsing', () => {
     expect(() => infoArgs('file:///c:/x')).toThrow();
     expect(() => infoArgs('--exec=calc')).toThrow();
     expect(infoArgs('https://a/b').slice(-2)).toEqual(['--', 'https://a/b']);
+  });
+});
+
+describe('yt-dlp versions', () => {
+  it('compares dotted versions numerically', () => {
+    expect(compareVersions('2026.10.21', '2026.10.21')).toBe(0);
+    expect(compareVersions('2026.9.30', '2026.10.1')).toBe(-1); // 9 < 10, not a text comparison
+    expect(compareVersions('2026.10.21.5', '2026.10.21')).toBe(1);
+    expect(compareVersions('2027.1.1', '2026.12.31')).toBe(1);
+  });
+
+  it('reads the latest release tag from the redirect', async () => {
+    const fake = (async () => new Response(null, { status: 302, headers: { location: 'https://github.com/yt-dlp/yt-dlp/releases/tag/2026.11.02' } })) as typeof fetch;
+    expect(await latestYtDlpVersion(fake)).toBe('2026.11.02');
+  });
+
+  it('fails clearly when GitHub does not redirect', async () => {
+    const fake = (async () => new Response(null, { status: 200 })) as typeof fetch;
+    await expect(latestYtDlpVersion(fake)).rejects.toThrow(/latest yt-dlp version/);
   });
 });
 

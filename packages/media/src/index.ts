@@ -1,10 +1,10 @@
 import { simplify, safeTitle, type MediaInfo } from './info.js';
 import { MediaDownloader, runJson, type Launch, type MediaJob } from './runner.js';
-import { findTool, installFfmpeg, installYtDlp, toolVersion } from './tools.js';
+import { compareVersions, findTool, installFfmpeg, installYtDlp, latestYtDlpVersion, toolVersion } from './tools.js';
 
 export * from './info.js';
 export { MediaDownloader, infoArgs, type Launch, type MediaJob } from './runner.js';
-export { findTool, installFfmpeg, installYtDlp, toolVersion, ytDlpAsset } from './tools.js';
+export { compareVersions, findTool, installFfmpeg, installYtDlp, latestYtDlpVersion, toolVersion, ytDlpAsset } from './tools.js';
 
 export interface MediaStatus {
   ytDlp: { path: string; version: string | null } | null;
@@ -44,6 +44,20 @@ export class Media {
 
   install(): Promise<{ path: string; sha256: string }> {
     return installYtDlp(this.dataDir);
+  }
+
+  latestVersion(): Promise<string> {
+    return latestYtDlpVersion();
+  }
+
+  /** Installs the newest yt-dlp only if the installed one is older (or missing). */
+  async updateYtDlp(): Promise<{ updated: boolean; from: string | null; to: string }> {
+    const before = (await this.status()).ytDlp;
+    const latest = await this.latestVersion();
+    if (before?.version && compareVersions(before.version, latest) >= 0) return { updated: false, from: before.version, to: before.version };
+    await installYtDlp(this.dataDir);
+    const after = (await this.status()).ytDlp?.version ?? latest;
+    return { updated: true, from: before?.version ?? null, to: after };
   }
 
   installFfmpeg(): Promise<{ path: string; sha256: string }> {

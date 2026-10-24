@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
         _core.EventReceived += (name, data) => _ui.TryEnqueue(() =>
         {
             Vm.OnEvent(name, data);
+            if (name == "media.updated") Toast($"yt-dlp was updated to {data.GetProperty("to").GetString()}");
             if (name == "capture.added") Toast("Download taken over from your browser");
             // A queue set to "exit when finished" closes the app once it has nothing left to do.
             if (name == "queue.finished" && data.GetProperty("afterAction").GetString() == "exit") Close();
@@ -178,7 +179,7 @@ public sealed partial class MainWindow : Window
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
         await Run(async () =>
         {
-            await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb, dialog.QuotaMb, dialog.QuotaHours);
+            await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb, dialog.QuotaMb, dialog.QuotaHours, dialog.AutoUpdate);
             _suppressLimit = true; // keep the sidebar slider in step without re-saving
             LimitSlider.Value = Math.Clamp(Vm.SpeedLimitMb, LimitSlider.Minimum, LimitSlider.Maximum);
             _suppressLimit = false;

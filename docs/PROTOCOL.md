@@ -56,9 +56,10 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `category.add` | `name`, `extensions` (array or space/comma string), optional `saveDir` (absolute) | the category |
 | `category.update` | `id` plus any of `name`, `extensions`, `saveDir` (`""`/null clears) | the category |
 | `category.delete` | `id` | `{deleted}` |
-| `settings.set` | any of `speedLimit` (bytes/s, 0 = unlimited), `maxConnections` (1–32), `defaultDir` (absolute), `quotaMb` (0 = off), `quotaHours` (0.1–720) | `{}` |
+| `settings.set` | any of `speedLimit` (bytes/s, 0 = unlimited), `maxConnections` (1–32), `defaultDir` (absolute), `quotaMb` (0 = off), `quotaHours` (0.1–720), `autoUpdateYtDlp` (boolean) | `{}` |
 | `media.status` | – | `{ytDlp:{path,version}\|null, ffmpeg:path\|null}` |
 | `media.install` | – | installs yt-dlp; `{path, sha256}` |
+| `media.update` | – | installs the newest yt-dlp only if the installed one is older; `{updated, from, to}` |
 | `media.installFfmpeg` | – | installs ffmpeg (Windows); `{path, sha256}` |
 | `media.info` | `url` (http/https), optional `headers` | `{title, uploader, duration, thumbnail, webpageUrl, canMerge, formats[], playlist?}`; for a playlist, `playlist` is `{entries:[{id,title,url,duration}], truncated}` and `formats` are fixed choices where a format is `{id, label, ext, height, size, kind}` |
 | `media.addMany` | `items` (array of `{url, title}`, 1-500), `format`, optional `ext`, `dir`, `headers`, `startNow` | `{added, ids}`; rows go to the main queue and `startNow` starts it |
@@ -76,6 +77,7 @@ Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, 
 | `queue.changed` | `{queueId, running}` |
 | `queue.finished` | `{queueId, afterAction}`: the UI decides whether to exit or shut down |
 | `capture.added` | `{id}`: a browser download was handed over |
+| `media.updated` | `{from, to}` when the automatic check installed a newer yt-dlp |
 | `quota.changed` | `{limitBytes, windowMs, used, blocked, resumeAt}` when the limit is reached, lifted or edited |
 | `queues.changed`, `categories.changed` | `{}`: reload the list |
 | `host.ready` | `{pid, dataDir}` |

@@ -39,6 +39,7 @@ public sealed class MainViewModel : Observable
     private QuotaDto _quota = new();
     private double _quotaMb;
     private double _quotaHours = 1;
+    private bool _autoUpdateYtDlp = true;
 
     public MainViewModel(CoreClient core) => _core = core;
 
@@ -69,6 +70,7 @@ public sealed class MainViewModel : Observable
     public string SpeedLimitText => _speedLimitMb >= UnlimitedSliderValue ? "UNLIMITED" : $"{_speedLimitMb:0.#} MB/s";
     public double QuotaMb { get => _quotaMb; private set => Set(ref _quotaMb, value); }
     public double QuotaHours { get => _quotaHours; private set => Set(ref _quotaHours, value); }
+    public bool AutoUpdateYtDlp { get => _autoUpdateYtDlp; private set => Set(ref _autoUpdateYtDlp, value); }
     public QuotaDto Quota { get => _quota; private set { _quota = value; Raise(nameof(Quota), nameof(QuotaText)); } }
 
     /// <summary>Status-bar text: empty when no limit is set.</summary>
@@ -106,6 +108,7 @@ public sealed class MainViewModel : Observable
         DefaultDir = snap.Settings.DefaultDir;
         QuotaMb = snap.Settings.QuotaMb;
         QuotaHours = snap.Settings.QuotaHours;
+        AutoUpdateYtDlp = snap.Settings.AutoUpdateYtDlp;
         Quota = snap.Quota;
         MaxConnections = snap.Settings.MaxConnections;
         SpeedLimitMb = snap.Settings.SpeedLimit > 0 ? Math.Clamp(Math.Round(snap.Settings.SpeedLimit / 1048576, 1), 0.1, UnlimitedSliderValue - 1) : UnlimitedSliderValue;
@@ -282,7 +285,7 @@ public sealed class MainViewModel : Observable
     // --- options ---------------------------------------------------------------------
 
     /// <summary>Saves the Options dialog. A speed of 0 (or the slider maximum) means unlimited.</summary>
-    public async Task SaveSettingsAsync(string dir, int connections, double speedMb, double quotaMb, double quotaHours)
+    public async Task SaveSettingsAsync(string dir, int connections, double speedMb, double quotaMb, double quotaHours, bool autoUpdateYtDlp)
     {
         var unlimited = speedMb <= 0 || speedMb >= UnlimitedSliderValue;
         await _core.CallAsync("settings.set", new
@@ -292,7 +295,9 @@ public sealed class MainViewModel : Observable
             speedLimit = unlimited ? 0L : (long)(speedMb * 1048576),
             quotaMb,
             quotaHours,
+            autoUpdateYtDlp,
         });
+        AutoUpdateYtDlp = autoUpdateYtDlp;
         QuotaMb = quotaMb;
         QuotaHours = quotaHours;
         DefaultDir = dir;
@@ -302,6 +307,9 @@ public sealed class MainViewModel : Observable
 
     /// <summary>Downloads the latest yt-dlp (also used to update it).</summary>
     public Task InstallYtDlpAsync() => _core.CallAsync("media.install");
+
+    /// <summary>Updates yt-dlp only if a newer release exists.</summary>
+    public Task<UpdateResultDto> UpdateYtDlpAsync() => _core.CallAsync<UpdateResultDto>("media.update");
     public Task InstallFfmpegAsync() => _core.CallAsync("media.installFfmpeg");
 
     // --- video downloads ---------------------------------------------------------

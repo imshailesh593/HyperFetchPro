@@ -86,7 +86,8 @@
               <ProgressRing x:Name="ToolRing" Width="16" Height="16" IsActive="False" Visibility="Collapsed" />
               <TextBlock x:Name="ToolStatus" FontSize="12" Foreground="{StaticResource DimTextBrush}" TextWrapping="Wrap" MaxWidth="400" />
             </StackPanel>
-            <TextBlock Text="Sites change often. Update yt-dlp if a video stops working. Downloads come from github.com/yt-dlp and are checked against published checksums."
+            <CheckBox x:Name="AutoUpdateBox" Content="Keep yt-dlp up to date automatically" AutomationProperties.Name="Keep yt-dlp up to date automatically" />
+            <TextBlock Text="With automatic updates the app checks once a day (only when no video is downloading) and installs a newer official release when there is one. Downloads come from github.com/yt-dlp and are checked against published checksums."
                        FontSize="11" Foreground="{StaticResource DimTextBrush}" TextWrapping="Wrap" />
           </StackPanel>
         </Border>

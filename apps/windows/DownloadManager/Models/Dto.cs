@@ -64,6 +64,7 @@ public sealed class SettingsDto
     public int MaxConnections { get; set; } = 8;
     public double QuotaMb { get; set; }
     public double QuotaHours { get; set; } = 1;
+    public bool AutoUpdateYtDlp { get; set; } = true;
 }
 
 public sealed class QuotaDto
@@ -147,4 +148,11 @@ public sealed class MediaInfoDto
     public bool CanMerge { get; set; }
     public List<MediaFormatDto> Formats { get; set; } = [];
     public PlaylistDto? Playlist { get; set; }
+}
+
+public sealed class UpdateResultDto
+{
+    public bool Updated { get; set; }
+    public string? From { get; set; }
+    public string To { get; set; } = "";
 }

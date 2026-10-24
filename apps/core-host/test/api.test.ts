@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Store } from '@dm/store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Media } from '@dm/media';
 import { Api } from '../src/api.js';
 
 const DATA = randomBytes(2 * 1024 * 1024);
@@ -158,5 +159,70 @@ describe('quota and repeat settings', () => {
     expect(q.repeatMinutes).toBe(30);
     expect(((await api.handle('queue.update', { id: q.id, repeatMinutes: null })) as any).repeatMinutes).toBeNull();
     await expect(api.handle('queue.update', { id: q.id, repeatMinutes: 0 })).rejects.toThrow(/1 and 1440/);
+  });
+});
+
+describe('automatic yt-dlp update', () => {
+  const DAY = 24 * 3_600_000;
+  let calls = 0;
+  let result: { updated: boolean; from: string | null; to: string } | Error;
+  let installed = true;
+  const stub = {
+    status: async () => ({ ytDlp: installed ? { path: 'x', version: '2026.1.1' } : null, ffmpeg: null }),
+    updateYtDlp: async () => {
+      calls++;
+      if (result instanceof Error) throw result;
+      return result;
+    },
+  } as unknown as Media;
+  let local: Api;
+
+  beforeEach(() => {
+    calls = 0;
+    installed = true;
+    result = { updated: true, from: '2026.1.1', to: '2026.2.2' };
+    local = new Api(store, (event, data) => events.push({ event, data }), { media: stub, autoUpdateDelayMs: null });
+  });
+  afterEach(async () => local.shutdown());
+
+  it('updates, announces it, and does not check again within a day', async () => {
+    const t0 = 10 * DAY;
+    expect(await local.autoUpdate(t0)).toEqual({ checked: true, updated: { from: '2026.1.1', to: '2026.2.2' } });
+    expect(events.some((e) => e.event === 'media.updated' && e.data.to === '2026.2.2')).toBe(true);
+    expect((await local.autoUpdate(t0 + DAY / 2)).reason).toBe('checked recently');
+    expect(calls).toBe(1);
+    expect((await local.autoUpdate(t0 + DAY + 1)).checked).toBe(true); // a day later it checks again
+    expect(calls).toBe(2);
+  });
+
+  it('records a check that found nothing new, without announcing', async () => {
+    result = { updated: false, from: '2026.1.1', to: '2026.1.1' };
+    expect(await local.autoUpdate(5 * DAY)).toEqual({ checked: true });
+    expect(events.some((e) => e.event === 'media.updated')).toBe(false);
+  });
+
+  it('can be switched off', async () => {
+    await local.handle('settings.set', { autoUpdateYtDlp: false });
+    expect(((await local.handle('state.snapshot')) as any).settings.autoUpdateYtDlp).toBe(false);
+    expect((await local.autoUpdate(5 * DAY)).reason).toBe('turned off');
+    await local.handle('settings.set', { autoUpdateYtDlp: true });
+    expect((await local.autoUpdate(5 * DAY)).checked).toBe(true);
+  });
+
+  it('waits while a video is downloading and when yt-dlp is not installed', async () => {
+    const row = store.addDownload({ url: 'http://t/v', dir: dir, filename: 'v.mp4', kind: 'media', status: 'running' });
+    expect((await local.autoUpdate(5 * DAY)).reason).toBe('a video is downloading');
+    store.updateDownload(row.id, { status: 'paused' });
+    installed = false;
+    expect((await local.autoUpdate(5 * DAY)).reason).toBe('not installed');
+    expect(calls).toBe(0);
+  });
+
+  it('tries again later after a failure (offline) instead of waiting a day', async () => {
+    result = new Error('fetch failed');
+    const first = await local.autoUpdate(5 * DAY);
+    expect(first).toMatchObject({ checked: false, reason: 'fetch failed' });
+    result = { updated: true, from: '2026.1.1', to: '2026.3.3' };
+    expect((await local.autoUpdate(5 * DAY + 60_000)).checked).toBe(true);
   });
 });

@@ -12,14 +12,15 @@
 - Packaging: self-contained build with bundled Node, per-user `Setup.exe` (Inno Setup) and zip; installing, running without Node on PATH, browser registration and uninstalling were verified.
 - WinUI 3 app with the supplied design, including the video flow in the Add dialog (verified by driving the real UI: link from clipboard, Find video, download to a finished mp4).
 - Playlists and channels: listed flat (fast), a checklist in the Add dialog, one quality for all selected videos, added to the main queue (verified with the real yt-dlp and in the real UI on a one-video channel; multi-video behaviour covered by tests with a fake yt-dlp).
+- yt-dlp stays current: a daily background check (not while a video downloads) installs newer official releases, checksum-verified, with an Options switch and a manual *Check for update*. Verified against GitHub: an old release (2025.10.22) was updated to 2026.10.21 from the core and from the real Options dialog.
 - Video progress is one continuous figure across the video and audio streams (checked against the real yt-dlp: 18 updates, total matched the sum of both streams).
 - Media backend: format list, runner with pause/resume, checksum-verified yt-dlp installer (verified against the real release and a real public video), ffmpeg installer. Both were run against the real releases, and a real public video was downloaded, merged and checked with ffmpeg (19 s, video + audio, mp4).
 
 ## Next (suggested order)
 
-1. **Video polish:** yt-dlp auto-update, more sites tested (Instagram, private content), a download-all button for long playlists with per-video quality.
-2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app, auto-update of yt-dlp.
-3. **Release polish:** code signing, auto-update (the app and yt-dlp), MSIX or winget package.
+1. **Video polish:** more sites tested (Instagram, private content), per-video quality for playlists.
+2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app.
+3. **Release polish:** code signing, auto-update of the app itself, MSIX or winget package.
 4. **macOS app** (SwiftUI) over the same protocol; native-messaging manifests for macOS browsers; signing/notarization.
 5. **Firefox** extension; stream/video sniffing in the extension; Alt-key bypass.
 6. **Site Grabber** (crawler with filters), FTP downloading in the engine, proxy support, site logins stored in the OS credential store, antivirus hook, CLI.

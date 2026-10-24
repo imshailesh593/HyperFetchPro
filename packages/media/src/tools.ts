@@ -120,3 +120,22 @@ export async function installFfmpeg(dataDir: string, fetchFn: typeof fetch = fet
     rmSync(work, { recursive: true, force: true });
   }
 }
+
+/** Compares dotted numeric versions such as 2026.10.21 (a longer one with the same start is newer). */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+/** The newest yt-dlp release tag, read from the redirect of github.com/yt-dlp/yt-dlp/releases/latest (no API quota). */
+export async function latestYtDlpVersion(fetchFn: typeof fetch = fetch): Promise<string> {
+  const res = await fetchFn('https://github.com/yt-dlp/yt-dlp/releases/latest', { method: 'HEAD', redirect: 'manual' });
+  const m = /\/tag\/([^/?#]+)\/?$/.exec(res.headers.get('location') ?? '');
+  if (!m) throw new Error('Could not read the latest yt-dlp version');
+  return decodeURIComponent(m[1]);
+}
