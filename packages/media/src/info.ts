@@ -8,6 +8,16 @@ export interface MediaFormat {
   kind: 'best' | 'video' | 'merged' | 'audio';
 }
 
+export interface PlaylistEntry {
+  id: string;
+  title: string;
+  /** Page link of the single video. */
+  url: string;
+  duration: number | null;
+}
+
+export const PLAYLIST_LIMIT = 500;
+
 export interface MediaInfo {
   title: string;
   uploader: string | null;
@@ -17,6 +27,8 @@ export interface MediaInfo {
   formats: MediaFormat[];
   /** False when ffmpeg is missing: only single-file formats are offered. */
   canMerge: boolean;
+  /** Present when the link is a playlist, channel or multi-item post. */
+  playlist?: { entries: PlaylistEntry[]; truncated: boolean };
 }
 
 interface RawFormat {
@@ -34,8 +46,50 @@ const hasV = (f: RawFormat) => !!f.vcodec && f.vcodec !== 'none';
 const hasA = (f: RawFormat) => !!f.acodec && f.acodec !== 'none';
 const sizeOf = (f: RawFormat) => f.filesize ?? f.filesize_approx ?? null;
 
+const UNAVAILABLE = /^\[(private|deleted) video\]$/i;
+
+function playlistEntries(raw: Record<string, any>): PlaylistEntry[] {
+  const out: PlaylistEntry[] = [];
+  for (const e of (raw.entries ?? []) as Array<Record<string, any> | null>) {
+    if (!e) continue;
+    let url: string | undefined = e.url ?? e.webpage_url;
+    if (!url || !/^https?:\/\//i.test(url)) url = e.ie_key === 'Youtube' && e.id ? `https://www.youtube.com/watch?v=${e.id}` : undefined;
+    const title = String(e.title ?? e.id ?? 'video');
+    if (!url || UNAVAILABLE.test(title)) continue;
+    out.push({ id: String(e.id ?? url), title, url, duration: typeof e.duration === 'number' ? e.duration : null });
+  }
+  return out;
+}
+
+/** Qualities offered for a whole playlist: fixed choices, since each video has its own formats. */
+function playlistFormats(canMerge: boolean): MediaFormat[] {
+  const formats: MediaFormat[] = canMerge
+    ? [{ id: 'bv*+ba/b', label: 'Best available', ext: 'mp4', height: null, size: null, kind: 'best' as const }]
+    : [{ id: 'b', label: 'Best available (single file)', ext: 'mp4', height: null, size: null, kind: 'best' as const }];
+  if (canMerge) {
+    for (const h of [1080, 720, 480, 360]) {
+      formats.push({ id: `bv*[height<=${h}]+ba/b[height<=${h}]`, label: `Up to ${h}p`, ext: 'mp4', height: h, size: null, kind: 'merged' });
+    }
+  }
+  formats.push({ id: 'ba', label: 'Audio only', ext: 'm4a', height: null, size: null, kind: 'audio' });
+  return formats;
+}
+
 /** Turns yt-dlp's `-J` output into a short, choosable list of qualities. */
 export function simplify(raw: Record<string, any>, canMerge: boolean): MediaInfo {
+  if (raw._type === 'playlist') {
+    const entries = playlistEntries(raw);
+    return {
+      title: String(raw.title ?? 'Playlist'),
+      uploader: raw.uploader ?? raw.channel ?? null,
+      duration: null,
+      thumbnail: null,
+      webpageUrl: String(raw.webpage_url ?? raw.original_url ?? ''),
+      formats: playlistFormats(canMerge),
+      canMerge,
+      playlist: { entries, truncated: (raw.entries?.length ?? 0) >= PLAYLIST_LIMIT },
+    };
+  }
   const all = ((raw.formats ?? []) as RawFormat[]).filter((f) => f.format_id);
   const formats: MediaFormat[] = [
     canMerge

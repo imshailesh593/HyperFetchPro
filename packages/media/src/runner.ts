@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
-import { FILE_PREFIX, PLAN_PREFIX, PROGRESS_TEMPLATE, ProgressTracker, parsePlan, parseProgress } from './info.js';
+import { PLAYLIST_LIMIT, FILE_PREFIX, PLAN_PREFIX, PROGRESS_TEMPLATE, ProgressTracker, parsePlan, parseProgress } from './info.js';
 
 export interface Launch {
   binary: string;
@@ -30,9 +30,21 @@ function killTree(child: ChildProcess): void {
   else child.kill('SIGTERM');
 }
 
+/** A watch link (with `v=`) or a youtu.be link means one video, even if it also names a playlist. */
+function wantsSingleVideo(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.searchParams.has('v') || u.hostname === 'youtu.be';
+  } catch {
+    return false;
+  }
+}
+
 export function infoArgs(url: string, headers?: Record<string, string>): string[] {
   assertWeb(url);
-  return ['-J', '--no-playlist', '--no-warnings', ...headerArgs(headers), '--', url];
+  // Playlists are listed flat (titles and links only) so reading them is fast.
+  const scope = wantsSingleVideo(url) ? ['--no-playlist'] : ['--flat-playlist', '--playlist-end', String(PLAYLIST_LIMIT)];
+  return ['-J', ...scope, '--no-warnings', ...headerArgs(headers), '--', url];
 }
 
 function headerArgs(headers?: Record<string, string>): string[] {

@@ -17,6 +17,9 @@ public sealed partial class AddDownloadDialog : ContentDialog
     /// <summary>A video the user picked a quality for; null means a plain file download.</summary>
     public sealed record MediaChoice(MediaInfoDto Info, MediaFormatDto Format);
 
+    /// <summary>The videos ticked in a playlist, with the quality chosen for all of them.</summary>
+    public sealed record PlaylistChoice(IReadOnlyList<PlaylistEntryDto> Entries, MediaFormatDto Format);
+
     private readonly Window _owner;
     private readonly MainViewModel _vm;
     private MediaInfoDto? _info;
@@ -39,8 +42,13 @@ public sealed partial class AddDownloadDialog : ContentDialog
     public string? Folder => string.IsNullOrWhiteSpace(FolderBox.Text) ? null : FolderBox.Text.Trim();
 
     public MediaChoice? SelectedMedia =>
-        _info is not null && QualityBox.Visibility == Visibility.Visible && QualityBox.SelectedItem is MediaFormatDto f
+        _info is not null && _info.Playlist is null && QualityBox.Visibility == Visibility.Visible && QualityBox.SelectedItem is MediaFormatDto f
             ? new MediaChoice(_info, f)
+            : null;
+
+    public PlaylistChoice? SelectedPlaylist =>
+        _info?.Playlist is not null && PlaylistPanel.Visibility == Visibility.Visible && QualityBox.SelectedItem is MediaFormatDto f
+            ? new PlaylistChoice(PlaylistList.SelectedItems.OfType<PlaylistEntryDto>().ToList(), f)
             : null;
 
     public Dictionary<string, string>? Headers
@@ -78,6 +86,8 @@ public sealed partial class AddDownloadDialog : ContentDialog
         _info = null;
         QualityBox.Visibility = Visibility.Collapsed;
         QualityBox.Items.Clear();
+        PlaylistPanel.Visibility = Visibility.Collapsed;
+        PlaylistList.ItemsSource = null;
         InstallToolsButton.Visibility = Visibility.Collapsed;
         VideoStatus.Text = "";
     }
@@ -115,6 +125,14 @@ public sealed partial class AddDownloadDialog : ContentDialog
             QualityBox.SelectedIndex = 0;
             QualityBox.Visibility = Visibility.Visible;
 
+            if (info.Playlist is { } list)
+            {
+                PlaylistList.ItemsSource = list.Entries;
+                PlaylistList.SelectAll();
+                PlaylistPanel.Visibility = Visibility.Visible;
+                UpdatePlaylistCount();
+            }
+
             var length = info.Duration is { } d ? $" ({TimeSpan.FromSeconds(d):h\\:mm\\:ss})" : "";
             var hint = "";
             if (!info.CanMerge)
@@ -122,12 +140,27 @@ public sealed partial class AddDownloadDialog : ContentDialog
                 hint = "\nffmpeg is missing, so only single-file qualities are listed.";
                 InstallToolsButton.Visibility = Visibility.Visible;
             }
-            Busy(false, $"{info.Title}{length}{(info.Uploader is { } u ? " — " + u : "")}{hint}\nChoose a quality, then Download now or Add to queue.");
+            var what = info.Playlist is { } pl
+                ? $"Playlist: {info.Title} ({Videos(pl.Entries.Count)}{(pl.Truncated ? ", first 500 shown" : "")})"
+                : $"{info.Title}{length}{(info.Uploader is { } u ? " — " + u : "")}";
+            Busy(false, $"{what}{hint}\nChoose {(info.Playlist is null ? "a quality" : "the videos and a quality")}, then Download now or Add to queue.");
         }
         catch (Exception ex)
         {
             Busy(false, ex.Message.Length > 300 ? ex.Message[..300] + "…" : ex.Message);
         }
+    }
+
+    private static string Videos(int n) => n == 1 ? "1 video" : $"{n} videos";
+
+    private void PlaylistAll_Click(object sender, RoutedEventArgs e) => PlaylistList.SelectAll();
+    private void PlaylistNone_Click(object sender, RoutedEventArgs e) => PlaylistList.SelectedItems.Clear();
+    private void Playlist_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdatePlaylistCount();
+
+    private void UpdatePlaylistCount()
+    {
+        if (PlaylistCount is null || _info?.Playlist is null) return; // fires while the dialog is being built
+        PlaylistCount.Text = $"{PlaylistList.SelectedItems.Count} of {Videos(_info.Playlist.Entries.Count)} selected";
     }
 
     private async void InstallTools_Click(object sender, RoutedEventArgs e)

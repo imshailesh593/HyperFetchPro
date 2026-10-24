@@ -60,7 +60,8 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `media.status` | – | `{ytDlp:{path,version}\|null, ffmpeg:path\|null}` |
 | `media.install` | – | installs yt-dlp; `{path, sha256}` |
 | `media.installFfmpeg` | – | installs ffmpeg (Windows); `{path, sha256}` |
-| `media.info` | `url` (http/https), optional `headers` | `{title, uploader, duration, thumbnail, webpageUrl, canMerge, formats[]}` where a format is `{id, label, ext, height, size, kind}` |
+| `media.info` | `url` (http/https), optional `headers` | `{title, uploader, duration, thumbnail, webpageUrl, canMerge, formats[], playlist?}`; for a playlist, `playlist` is `{entries:[{id,title,url,duration}], truncated}` and `formats` are fixed choices where a format is `{id, label, ext, height, size, kind}` |
+| `media.addMany` | `items` (array of `{url, title}`, 1-500), `format`, optional `ext`, `dir`, `headers`, `startNow` | `{added, ids}`; rows go to the main queue and `startNow` starts it |
 | `media.add` | `url`, `title`, `format` (a format `id`), optional `ext`, `dir`, `headers`, `startNow` | download row with `kind:'media'` |
 
 Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, `Video downloads are not available`, and so on.

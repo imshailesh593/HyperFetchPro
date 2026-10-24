@@ -241,6 +241,25 @@ export class Api {
         });
       }
 
+      case 'media.addMany': {
+        this.requireMedia();
+        const items = Array.isArray(p.items) ? (p.items as Array<{ url?: unknown; title?: unknown }>) : [];
+        if (items.length === 0) throw new Error('Choose at least one video');
+        if (items.length > 500) throw new Error('At most 500 videos can be added at once');
+        const format = str('format');
+        const ext = typeof p.ext === 'string' && p.ext ? p.ext : 'mp4';
+        const dir = typeof p.dir === 'string' && p.dir ? p.dir : undefined;
+        const headers = (p.headers as Record<string, string> | undefined) ?? undefined;
+        const ids: number[] = [];
+        for (const it of items) {
+          if (typeof it.url !== 'string' || typeof it.title !== 'string') throw new Error('Each video needs a url and a title');
+          const row = await this.manager.addMedia({ url: webUrl(it.url), title: it.title, format, ext, dir, headers, queueId: MAIN_DOWNLOAD_QUEUE });
+          ids.push(row.id);
+        }
+        if (p.startNow === true) this.scheduler.startQueue(MAIN_DOWNLOAD_QUEUE);
+        return { added: ids.length, ids };
+      }
+
       case 'ping':
         return { pong: true };
 

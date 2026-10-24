@@ -44,6 +44,27 @@ describe('media api with a fake yt-dlp', () => {
     expect(store.getDownload(row.id)?.error).toContain('Video unavailable');
   });
 
+  it('adds a whole playlist to the queue and runs it', async () => {
+    const info = (await api.handle('media.info', { url: 'https://site/playlist' })) as any;
+    expect(info.playlist.entries).toHaveLength(3);
+    const picked = info.playlist.entries.slice(0, 2).map((e: any) => ({ url: e.url, title: e.title }));
+    const r = (await api.handle('media.addMany', { items: picked, format: 'b', ext: 'mp4', startNow: true })) as any;
+    expect(r.added).toBe(2);
+    await waitFor(() => r.ids.every((id: number) => store.getDownload(id)?.status === 'completed'));
+    expect(r.ids.map((id: number) => store.getDownload(id)?.filename)).toEqual(['First.mp4', 'Second.mp4']);
+  });
+
+  it('adds videos without starting them when startNow is off', async () => {
+    const r = (await api.handle('media.addMany', { items: [{ url: 'https://site/ok', title: 'One' }], format: 'b' })) as any;
+    expect(store.getDownload(r.ids[0])).toMatchObject({ status: 'queued', queueId: 1, kind: 'media' });
+  });
+
+  it('validates addMany input', async () => {
+    await expect(api.handle('media.addMany', { items: [], format: 'b' })).rejects.toThrow(/at least one/);
+    await expect(api.handle('media.addMany', { items: [{ url: 'file:///x', title: 't' }], format: 'b' })).rejects.toThrow(/http and https/);
+    await expect(api.handle('media.addMany', { items: [{ url: 5, title: 't' }], format: 'b' })).rejects.toThrow(/url and a title/);
+  });
+
   it('rejects link schemes that are not http(s)', async () => {
     await expect(api.handle('media.add', { url: 'file:///x', title: 't', format: 'b' })).rejects.toThrow(/http and https/);
   });

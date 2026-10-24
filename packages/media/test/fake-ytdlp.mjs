@@ -3,6 +3,17 @@ import fs from 'node:fs';
 const a = process.argv.slice(2);
 const url = a[a.length - 1];
 const kind = new URL(url).pathname.slice(1);
+if (a.includes('-J') && kind === 'playlist') {
+  if (!a.includes('--flat-playlist')) { console.error('ERROR: would process every video'); process.exit(1); }
+  console.log(JSON.stringify({ _type: 'playlist', title: 'My list', uploader: 'Me', entries: [
+    { id: 'a1', title: 'First', url: 'https://site/ok', ie_key: 'Generic', duration: 30 },
+    { id: 'b2', title: 'Second', url: 'https://site/two', duration: 60 },
+    { id: 'c3', title: '[Private video]', url: 'https://site/hidden' },
+    { id: 'd4', title: 'Fourth', ie_key: 'Youtube' },
+    null,
+  ] }));
+  process.exit(0);
+}
 if (a.includes('-J')) {
   if (kind === 'fail') { console.error('ERROR: [generic] Unsupported URL: ' + url); process.exit(1); }
   console.log(JSON.stringify({ title: 'My: Clip?', uploader: 'Me', duration: 12, webpage_url: url, formats: [

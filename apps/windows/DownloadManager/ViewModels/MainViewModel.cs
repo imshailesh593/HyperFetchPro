@@ -327,6 +327,13 @@ public sealed class MainViewModel : Observable
         }
     }
 
+    /// <summary>Adds the chosen playlist videos to the main queue; with startNow the queue is started too.</summary>
+    public Task AddPlaylistAsync(IEnumerable<PlaylistEntryDto> entries, MediaFormatDto format, bool startNow, string? dir, Dictionary<string, string>? headers)
+    {
+        var items = entries.Select(e => new { url = e.Url, title = e.Title }).ToList();
+        return _core.CallAsync("media.addMany", new { items, format = format.Id, ext = format.Ext, startNow, dir, headers });
+    }
+
     public Task AddMediaAsync(string url, MediaInfoDto info, MediaFormatDto format, bool startNow, string? dir, Dictionary<string, string>? headers) =>
         _core.CallAsync("media.add", new { url, title = info.Title, format = format.Id, ext = format.Ext, startNow, dir, headers });
 

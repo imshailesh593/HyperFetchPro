@@ -49,6 +49,17 @@
         </StackPanel>
         <Button x:Name="InstallToolsButton" Content="Install video tools" Click="InstallTools_Click" Visibility="Collapsed"
                 AutomationProperties.Name="Install video tools" />
+        <StackPanel x:Name="PlaylistPanel" Spacing="6" Visibility="Collapsed">
+          <Grid>
+            <TextBlock x:Name="PlaylistCount" FontSize="12" VerticalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+              <Button Content="All" Click="PlaylistAll_Click" Padding="10,2" AutomationProperties.Name="Select all videos" />
+              <Button Content="None" Click="PlaylistNone_Click" Padding="10,2" AutomationProperties.Name="Select no videos" />
+            </StackPanel>
+          </Grid>
+          <ListView x:Name="PlaylistList" SelectionMode="Multiple" Height="170" DisplayMemberPath="Display"
+                    SelectionChanged="Playlist_SelectionChanged" AutomationProperties.Name="Playlist videos" />
+        </StackPanel>
         <ComboBox x:Name="QualityBox" Header="Quality" HorizontalAlignment="Stretch" Visibility="Collapsed"
                   AutomationProperties.Name="Quality" />
       </StackPanel>

@@ -145,7 +145,13 @@ public sealed partial class MainWindow : Window
         var startNow = result == ContentDialogResult.Primary;
         await Run(async () =>
         {
-            if (dialog.SelectedMedia is { } media)
+            if (dialog.SelectedPlaylist is { } playlist)
+            {
+                if (playlist.Entries.Count == 0) { Toast("Select at least one video.", error: true); return; }
+                await Vm.AddPlaylistAsync(playlist.Entries, playlist.Format, startNow, dialog.Folder, dialog.Headers);
+                Toast(startNow ? $"Started {playlist.Entries.Count} videos" : $"Added {playlist.Entries.Count} videos to the queue");
+            }
+            else if (dialog.SelectedMedia is { } media)
                 await Vm.AddMediaAsync(dialog.Url, media.Info, media.Format, startNow, dialog.Folder, dialog.Headers);
             else
                 await Vm.AddAsync(dialog.Url, startNow, dialog.CategoryId, dialog.Folder, dialog.Headers);

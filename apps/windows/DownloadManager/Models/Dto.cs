@@ -118,6 +118,27 @@ public sealed class MediaFormatDto
         Size is > 0 ? $"{Label}  ·  {DownloadManager.Services.Fmt.Bytes(Size.Value)}" : Label;
 }
 
+public sealed class PlaylistEntryDto
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Url { get; set; } = "";
+    public double? Duration { get; set; }
+
+    /// <summary>Shown in the playlist list: title and length.</summary>
+    public string Display => Duration is { } s && s > 0
+        ? $"{Title}   ({TimeSpan.FromSeconds(s):h\\:mm\\:ss})"
+        : Title;
+
+    public override string ToString() => Display;
+}
+
+public sealed class PlaylistDto
+{
+    public List<PlaylistEntryDto> Entries { get; set; } = [];
+    public bool Truncated { get; set; }
+}
+
 public sealed class MediaInfoDto
 {
     public string Title { get; set; } = "";
@@ -125,4 +146,5 @@ public sealed class MediaInfoDto
     public double? Duration { get; set; }
     public bool CanMerge { get; set; }
     public List<MediaFormatDto> Formats { get; set; } = [];
+    public PlaylistDto? Playlist { get; set; }
 }

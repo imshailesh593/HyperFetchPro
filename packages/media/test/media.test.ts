@@ -18,6 +18,13 @@ describe('parsing', () => {
     expect(parseProgress('[download] 5%')).toBeNull();
   });
   it('cleans titles for filenames', () => expect(safeTitle('My: Clip?/x')).toBe('My_ Clip__x'));
+  it('treats watch links as one video even when they name a playlist', () => {
+    expect(infoArgs('https://www.youtube.com/watch?v=abc&list=PL1')).toContain('--no-playlist');
+    expect(infoArgs('https://youtu.be/abc?list=PL1')).toContain('--no-playlist');
+    const list = infoArgs('https://www.youtube.com/playlist?list=PL1');
+    expect(list).not.toContain('--no-playlist');
+    expect(list).toEqual(expect.arrayContaining(['--flat-playlist', '--playlist-end', '500']));
+  });
   it('only accepts http(s) links, and puts the URL after --', () => {
     expect(() => infoArgs('file:///c:/x')).toThrow();
     expect(() => infoArgs('--exec=calc')).toThrow();
@@ -69,6 +76,23 @@ describe('Media', () => {
     const info = await new Media(dir, { ...launch, ffmpeg: 'ffmpeg' }).info('https://x/ok');
     expect(info.formats.map((f) => f.label)).toEqual(['Best available', '1080p', '720p', '480p', '360p', 'Audio only (m4a)']);
     expect(info.formats[2].id).toBe('bv*[height<=720]+ba/b[height<=720]');
+  });
+
+  it('lists a playlist flat and drops private videos', async () => {
+    const info = await new Media(dir, { ...launch, ffmpeg: 'ffmpeg' }).info('https://x/playlist');
+    expect(info.title).toBe('My list');
+    expect(info.playlist?.entries.map((e) => [e.title, e.url])).toEqual([
+      ['First', 'https://site/ok'],
+      ['Second', 'https://site/two'],
+      ['Fourth', 'https://www.youtube.com/watch?v=d4'], // built from the id for YouTube entries
+    ]);
+    expect(info.playlist?.truncated).toBe(false);
+    expect(info.formats.map((f) => f.label)).toEqual(['Best available', 'Up to 1080p', 'Up to 720p', 'Up to 480p', 'Up to 360p', 'Audio only']);
+  });
+
+  it('offers single-file choices for a playlist without ffmpeg', async () => {
+    const info = await new Media(dir, launch).info('https://x/playlist');
+    expect(info.formats.map((f) => f.label)).toEqual(['Best available (single file)', 'Audio only']);
   });
 
   it('reports yt-dlp errors readably', async () => {
