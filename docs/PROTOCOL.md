@@ -61,7 +61,7 @@ The core (`apps/core-host`, bundled to `dist/host.mjs`) is a Node process that o
 | `media.install` | – | installs yt-dlp; `{path, sha256}` |
 | `media.update` | – | installs the newest yt-dlp only if the installed one is older; `{updated, from, to}` |
 | `media.installFfmpeg` | – | installs ffmpeg (Windows); `{path, sha256}` |
-| `media.info` | `url` (http/https), optional `headers` | `{title, uploader, duration, thumbnail, webpageUrl, canMerge, formats[], playlist?}`; for a playlist, `playlist` is `{entries:[{id,title,url,duration}], truncated}` and `formats` are fixed choices where a format is `{id, label, ext, height, size, kind}` |
+| `media.info` | `url` (http/https), optional `headers` (a `Cookie` header is turned into a temporary cookie file for yt-dlp) | `{title, uploader, duration, thumbnail, webpageUrl, canMerge, formats[], playlist?}`; for a playlist, `playlist` is `{entries:[{id,title,url,duration}], truncated}` and `formats` are fixed choices where a format is `{id, label, ext, height, size, kind}` |
 | `media.addMany` | `items` (array of `{url, title}`, 1-500), `format`, optional `ext`, `dir`, `headers`, `startNow` | `{added, ids}`; rows go to the main queue and `startNow` starts it |
 | `media.add` | `url`, `title`, `format` (a format `id`), optional `ext`, `dir`, `headers`, `startNow` | download row with `kind:'media'` |
 
@@ -76,6 +76,7 @@ Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, 
 | `download.removed` | `{id}` |
 | `queue.changed` | `{queueId, running}` |
 | `queue.finished` | `{queueId, afterAction}`: the UI decides whether to exit or shut down |
+| `capture.media` | `{url, referrer?, userAgent?, cookie?}`: the browser sent a video page; open the Add dialog for it |
 | `capture.added` | `{id}`: a browser download was handed over |
 | `media.updated` | `{from, to}` when the automatic check installed a newer yt-dlp |
 | `quota.changed` | `{limitBytes, windowMs, used, blocked, resumeAt}` when the limit is reached, lifted or edited |
@@ -84,4 +85,4 @@ Errors are plain strings: `Missing string parameter: url`, `Unknown method: x`, 
 
 ## Local IPC (for the browser host)
 
-Besides stdio, the core listens on a per-user endpoint: named pipe `\\.\pipe\DownloadManager.<username>` on Windows, `<dataDir>/dm.sock` (mode 0600) on macOS/Linux. Requests are one JSON line: `{"token":"…","method":"ping"|"capture","params":{…}}`; replies `{"ok":true,"result":…}` or `{"ok":false,"error":"…"}`. The token is generated on each start and written to `<dataDir>/ipc.token` (user-only), removed on exit. `capture` params: `url`, optional `filename`, `referrer`, `userAgent`, `cookie`.
+Besides stdio, the core listens on a per-user endpoint: named pipe `\\.\pipe\DownloadManager.<username>` on Windows, `<dataDir>/dm.sock` (mode 0600) on macOS/Linux. Requests are one JSON line: `{"token":"…","method":"ping"|"capture","params":{…}}`; replies `{"ok":true,"result":…}` or `{"ok":false,"error":"…"}`. The token is generated on each start and written to `<dataDir>/ipc.token` (user-only), removed on exit. `capture` params: `url`, optional `filename`, `referrer`, `userAgent`, `cookie`. `media` (a video page from the browser) takes `url` (http/https), optional `referrer`, `userAgent`, `cookie`, replies `{ok:true}` and makes the core emit the `capture.media` event for the UI to open its Add dialog.

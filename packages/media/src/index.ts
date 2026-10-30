@@ -3,6 +3,7 @@ import { MediaDownloader, runJson, type Launch, type MediaJob } from './runner.j
 import { compareVersions, findTool, installFfmpeg, installYtDlp, latestYtDlpVersion, toolVersion } from './tools.js';
 
 export * from './info.js';
+export { cookieDomain, cookieHeaderToNetscape, explainError, prepareHeaders } from './cookies.js';
 export { MediaDownloader, infoArgs, type Launch, type MediaJob } from './runner.js';
 export { compareVersions, findTool, installFfmpeg, installYtDlp, latestYtDlpVersion, toolVersion, ytDlpAsset } from './tools.js';
 

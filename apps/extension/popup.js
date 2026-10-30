@@ -9,3 +9,13 @@ chrome.runtime.sendMessage('ping', (r) => {
   s.className = ok ? 'ok' : 'bad';
   if (ok) chrome.action.setBadgeText({ text: '' });
 });
+
+const video = document.getElementById('video');
+const msg = document.getElementById('msg');
+video.onclick = async () => {
+  video.disabled = true;
+  msg.textContent = 'Sending…';
+  const r = await chrome.runtime.sendMessage({ type: 'video-page-active' });
+  msg.textContent = r && r.ok ? 'Sent. Choose the quality in HyperFetch Pro.' : r && r.error === 'app-not-running' ? 'Start HyperFetch Pro first.' : 'Could not send this page.';
+  video.disabled = false;
+};

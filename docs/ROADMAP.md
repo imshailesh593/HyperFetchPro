@@ -12,13 +12,14 @@
 - Packaging: self-contained build with bundled Node, per-user `Setup.exe` (Inno Setup) and zip; installing, running without Node on PATH, browser registration and uninstalling were verified.
 - WinUI 3 app with the supplied design, including the video flow in the Add dialog (verified by driving the real UI: link from clipboard, Find video, download to a finished mp4).
 - Playlists and channels: listed flat (fast), a checklist in the Add dialog, one quality for all selected videos, added to the main queue (verified with the real yt-dlp and in the real UI on a one-video channel; multi-video behaviour covered by tests with a fake yt-dlp).
+- Videos from web pages: a download button over videos, toolbar and right-click entries; the app opens the Add dialog with the page and the browser's cookies (including HttpOnly logins). Verified in a real Edge: hover, click, dialog, and a login-only video downloaded. Cookies reach yt-dlp as a private temporary cookie file, deleted afterwards (verified with the real yt-dlp against a cookie-requiring local server).
 - yt-dlp stays current: a daily background check (not while a video downloads) installs newer official releases, checksum-verified, with an Options switch and a manual *Check for update*. Verified against GitHub: an old release (2025.10.22) was updated to 2026.10.21 from the core and from the real Options dialog.
 - Video progress is one continuous figure across the video and audio streams (checked against the real yt-dlp: 18 updates, total matched the sum of both streams).
 - Media backend: format list, runner with pause/resume, checksum-verified yt-dlp installer (verified against the real release and a real public video), ffmpeg installer. Both were run against the real releases, and a real public video was downloaded, merged and checked with ffmpeg (19 s, video + audio, mp4).
 
 ## Next (suggested order)
 
-1. **Video polish:** more sites tested (Instagram, private content), per-video quality for playlists.
+1. **Video polish:** per-video quality for playlists, automatic stream detection in the extension (network sniffing), Instagram tried with a real logged-in account.
 2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app.
 3. **Release polish:** code signing, auto-update of the app itself, MSIX or winget package.
 4. **macOS app** (SwiftUI) over the same protocol; native-messaging manifests for macOS browsers; signing/notarization.
@@ -30,7 +31,7 @@
 
 - Not yet tried against real internet servers beyond the yt-dlp/GitHub requests; engine tests use local servers.
 - The extension was verified in Edge only (see BROWSER-INTEGRATION.md); Chrome, Brave and Firefox are untried, and only a direct file link was tested (no referrer, no login-protected site).
-- Only one site/video was tried for real (a short public YouTube clip, also as a one-video channel list). Instagram, private content and long playlists are untested; playlist downloads run through the main queue one at a time by default.
+- Only YouTube and local test sites were tried for real. Instagram is verified only up to its logged-out error message and the cookie plumbing (a local site that requires a login cookie); a real logged-in Instagram download was not tried (it needs a real account). Long playlists are untested; playlist downloads run through the main queue one at a time by default.
 - Proxy, FTP, checksums, and per-site connection limits are not implemented.
 - The download limit can overshoot by roughly (connections x chunk size) = about 1 to 2 MB; video (yt-dlp) downloads are counted from progress reports and can overshoot more. The period is a fixed window from the first byte, not a rolling one. Only unit tests cover the automatic resume after a period (the shortest period is 6 minutes).
 - Speed limit is divided evenly between running downloads (not by need).

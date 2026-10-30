@@ -1,21 +1,50 @@
-// Stand-in for yt-dlp: behaviour is chosen by the URL path (/ok, /slow, /fail) or -J.
+// Stand-in for yt-dlp: behaviour is chosen by the last path segment of the URL
+// (ok, slow, fail, two, playlist, login) and by -J (info) versus a download.
 import fs from 'node:fs';
+
 const a = process.argv.slice(2);
 const url = a[a.length - 1];
 const kind = new URL(url).pathname.slice(1);
-if (a.includes('-J') && kind === 'playlist') {
-  if (!a.includes('--flat-playlist')) { console.error('ERROR: would process every video'); process.exit(1); }
-  console.log(JSON.stringify({ _type: 'playlist', title: 'My list', uploader: 'Me', entries: [
-    { id: 'a1', title: 'First', url: 'https://site/ok', ie_key: 'Generic', duration: 30 },
-    { id: 'b2', title: 'Second', url: 'https://site/two', duration: 60 },
-    { id: 'c3', title: '[Private video]', url: 'https://site/hidden' },
-    { id: 'd4', title: 'Fourth', ie_key: 'Youtube' },
-    null,
-  ] }));
-  process.exit(0);
+const flag = (name) => (a.includes(name) ? a[a.indexOf(name) + 1] : null);
+
+// A site that needs a login: requires a cookie jar containing sid=abc. The jar's location is logged
+// (DM_FAKE_LOG) so tests can check the temporary file is removed afterwards.
+function requireLogin() {
+  const jar = flag('--cookies');
+  if (jar && process.env.DM_FAKE_LOG) fs.appendFileSync(process.env.DM_FAKE_LOG, jar + '\n');
+  const text = jar ? fs.readFileSync(jar, 'utf8') : '';
+  if (!/\tsid\tabc/.test(text)) {
+    console.error('ERROR: [Instagram] empty media response. Use --cookies-from-browser or --cookies for the authentication');
+    process.exit(1);
+  }
 }
+
 if (a.includes('-J')) {
-  if (kind === 'fail') { console.error('ERROR: [generic] Unsupported URL: ' + url); process.exit(1); }
+  if (kind === 'playlist') {
+    if (!a.includes('--flat-playlist')) {
+      console.error('ERROR: would process every video');
+      process.exit(1);
+    }
+    console.log(JSON.stringify({ _type: 'playlist', title: 'My list', uploader: 'Me', entries: [
+      { id: 'a1', title: 'First', url: 'https://site/ok', ie_key: 'Generic', duration: 30 },
+      { id: 'b2', title: 'Second', url: 'https://site/two', duration: 60 },
+      { id: 'c3', title: '[Private video]', url: 'https://site/hidden' },
+      { id: 'd4', title: 'Fourth', ie_key: 'Youtube' },
+      null,
+    ] }));
+    process.exit(0);
+  }
+  if (kind === 'login') {
+    requireLogin();
+    console.log(JSON.stringify({ title: 'Private reel', uploader: 'someone', duration: 9, webpage_url: url, formats: [
+      { format_id: '18', ext: 'mp4', height: 360, vcodec: 'avc1', acodec: 'mp4a', protocol: 'https' },
+    ] }));
+    process.exit(0);
+  }
+  if (kind === 'fail') {
+    console.error('ERROR: [generic] Unsupported URL: ' + url);
+    process.exit(1);
+  }
   console.log(JSON.stringify({ title: 'My: Clip?', uploader: 'Me', duration: 12, webpage_url: url, formats: [
     { format_id: '18', ext: 'mp4', height: 360, vcodec: 'avc1', acodec: 'mp4a', filesize: 1000, protocol: 'https' },
     { format_id: '22', ext: 'mp4', height: 720, vcodec: 'avc1', acodec: 'mp4a', filesize: 5000, protocol: 'https' },
@@ -25,11 +54,16 @@ if (a.includes('-J')) {
   ] }));
   process.exit(0);
 }
-const o = a[a.indexOf('-o') + 1];
-const out = o.replace('%(ext)s', 'mp4');
+
+// ---- download
+const out = flag('-o').replace('%(ext)s', 'mp4');
+if (kind === 'login') requireLogin();
 // Like the real yt-dlp: --print makes it quiet, so progress only appears with --progress.
 const showProgress = a.includes('--progress');
-if (kind === 'fail') { console.error('ERROR: Video unavailable'); process.exit(1); }
+if (kind === 'fail') {
+  console.error('ERROR: Video unavailable');
+  process.exit(1);
+}
 if (kind === 'two') {
   // video stream (1000 bytes) then audio stream (500 bytes), like a merged download
   console.log('DMPLAN:' + JSON.stringify([{ filesize: 1000 }, { filesize_approx: 500 }]));

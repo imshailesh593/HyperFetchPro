@@ -23,8 +23,12 @@ public sealed partial class AddDownloadDialog : ContentDialog
     private readonly Window _owner;
     private readonly MainViewModel _vm;
     private MediaInfoDto? _info;
+    private readonly bool _fromBrowser;
+    private string? _foundUrl; // the link the current quality list belongs to
 
-    public AddDownloadDialog(Window owner, XamlRoot root, MainViewModel vm)
+    /// <param name="initialUrl">A video page sent by the browser extension; the dialog looks the video up straight away.</param>
+    /// <param name="initialCookie">The browser's cookies for that site (its login), used to read and download the video.</param>
+    public AddDownloadDialog(Window owner, XamlRoot root, MainViewModel vm, string? initialUrl = null, string? initialCookie = null)
     {
         _owner = owner;
         _vm = vm;
@@ -34,7 +38,21 @@ public sealed partial class AddDownloadDialog : ContentDialog
         CategoryBox.Items.Add(new CategoryChoice(null, "Automatic (by file type)"));
         foreach (var c in vm.CategoryList) CategoryBox.Items.Add(new CategoryChoice(c.Id, c.Name));
         CategoryBox.SelectedIndex = 0;
-        Loaded += async (_, _) => await TryPasteFromClipboardAsync(auto: true);
+        if (!string.IsNullOrEmpty(initialUrl))
+        {
+            _fromBrowser = true;
+            if (!string.IsNullOrEmpty(initialCookie)) CookieBox.Text = initialCookie;
+            UrlBox.Text = initialUrl;
+            Loaded += async (_, _) =>
+            {
+                UpdateUrlState();
+                await FindVideoAsync();
+            };
+        }
+        else
+        {
+            Loaded += async (_, _) => await TryPasteFromClipboardAsync(auto: true);
+        }
     }
 
     public string Url => UrlBox.Text.Trim();
@@ -70,13 +88,20 @@ public sealed partial class AddDownloadDialog : ContentDialog
 
     private void UrlBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        UpdateUrlState();
+        if (Url != _foundUrl) ResetVideo(); // a different link invalidates any quality list
+    }
+
+    /// <summary>Enables the buttons that need a valid link. Also called directly for a link given at start-up,
+    /// because text set before the dialog is shown does not raise TextChanged.</summary>
+    private void UpdateUrlState()
+    {
         var text = Url;
         var ok = IsSupported(text);
         IsPrimaryButtonEnabled = IsSecondaryButtonEnabled = ok;
         FindVideoButton.IsEnabled = IsWeb(text);
         UrlError.Text = text.Length > 0 && !ok ? "Enter a full http://, https:// or ftp:// link." : "";
         UrlError.Visibility = UrlError.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        ResetVideo(); // a different link invalidates any quality list
     }
 
     // --- video ---------------------------------------------------------------------
@@ -84,6 +109,7 @@ public sealed partial class AddDownloadDialog : ContentDialog
     private void ResetVideo()
     {
         _info = null;
+        _foundUrl = null;
         QualityBox.Visibility = Visibility.Collapsed;
         QualityBox.Items.Clear();
         PlaylistPanel.Visibility = Visibility.Collapsed;
@@ -121,6 +147,7 @@ public sealed partial class AddDownloadDialog : ContentDialog
             var info = await _vm.MediaInfoAsync(url, Headers);
             if (url != Url) return; // the link changed while we were waiting
             _info = info;
+            _foundUrl = url;
             foreach (var f in info.Formats) QualityBox.Items.Add(f);
             QualityBox.SelectedIndex = 0;
             QualityBox.Visibility = Visibility.Visible;
@@ -140,10 +167,11 @@ public sealed partial class AddDownloadDialog : ContentDialog
                 hint = "\nffmpeg is missing, so only single-file qualities are listed.";
                 InstallToolsButton.Visibility = Visibility.Visible;
             }
+            var login = _fromBrowser && CookieBox.Text.Length > 0 ? "\nUsing your browser's login for this site." : "";
             var what = info.Playlist is { } pl
                 ? $"Playlist: {info.Title} ({Videos(pl.Entries.Count)}{(pl.Truncated ? ", first 500 shown" : "")})"
                 : $"{info.Title}{length}{(info.Uploader is { } u ? " — " + u : "")}";
-            Busy(false, $"{what}{hint}\nChoose {(info.Playlist is null ? "a quality" : "the videos and a quality")}, then Download now or Add to queue.");
+            Busy(false, $"{what}{hint}{login}\nChoose {(info.Playlist is null ? "a quality" : "the videos and a quality")}, then Download now or Add to queue.");
         }
         catch (Exception ex)
         {

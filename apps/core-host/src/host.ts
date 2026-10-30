@@ -21,7 +21,13 @@ const send = (message: unknown): void => {
 
 const api = new Api(store, (event, data) => send({ event, data }), { media: new Media(dataDir) });
 
-const ipc = startIpcServer(api, dataDir, (id) => send({ event: 'capture.added', data: { id } }));
+const ipc = startIpcServer(
+  api,
+  dataDir,
+  (id) => send({ event: 'capture.added', data: { id } }),
+  undefined,
+  (media) => send({ event: 'capture.media', data: media }),
+);
 
 const rl = readline.createInterface({ input: process.stdin });
 rl.on('line', (line) => {

@@ -14,6 +14,14 @@ export function ipcPath(dataDir: string): string {
 
 export const TOKEN_FILE = 'ipc.token';
 
+/** A video page the browser wants the app to offer for download (the user then picks a quality in the app). */
+export interface MediaCaptureParams {
+  url: string;
+  referrer?: string;
+  userAgent?: string;
+  cookie?: string;
+}
+
 export interface CaptureParams {
   url: string;
   filename?: string;
@@ -27,7 +35,13 @@ export interface CaptureParams {
  * which only the current user can read; that stops other local users and web pages.
  * Methods: `ping`, `capture` (adds and starts a download, returns the row).
  */
-export function startIpcServer(api: Api, dataDir: string, onCapture?: (id: number) => void, pipe = ipcPath(dataDir)) {
+export function startIpcServer(
+  api: Api,
+  dataDir: string,
+  onCapture?: (id: number) => void,
+  pipe = ipcPath(dataDir),
+  onMedia?: (params: MediaCaptureParams) => void,
+) {
   mkdirSync(dataDir, { recursive: true });
   const token = randomBytes(32).toString('hex');
   const tokenFile = path.join(dataDir, TOKEN_FILE);
@@ -52,9 +66,21 @@ export function startIpcServer(api: Api, dataDir: string, onCapture?: (id: numbe
 
   async function respond(line: string): Promise<{ ok: boolean; result?: unknown; error?: string }> {
     try {
-      const req = JSON.parse(line) as { token?: string; method?: string; params?: CaptureParams };
+      const req = JSON.parse(line) as { token?: string; method?: string; params?: CaptureParams & MediaCaptureParams };
       if (req.token !== token) return { ok: false, error: 'unauthorized' };
       if (req.method === 'ping') return { ok: true, result: { pong: true } };
+      if (req.method === 'media' && req.params) {
+        const { url, referrer, userAgent, cookie } = req.params;
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return { ok: false, error: 'Only http and https links are supported' };
+        if (!onMedia) return { ok: false, error: 'video capture is not available' };
+        onMedia({
+          url,
+          referrer: typeof referrer === 'string' ? referrer : undefined,
+          userAgent: typeof userAgent === 'string' ? userAgent : undefined,
+          cookie: typeof cookie === 'string' && cookie ? cookie : undefined,
+        });
+        return { ok: true, result: {} };
+      }
       if (req.method === 'capture' && req.params) {
         const p = req.params;
         const headers: Record<string, string> = {};

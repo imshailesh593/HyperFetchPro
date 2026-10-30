@@ -105,6 +105,15 @@ Works for YouTube, Instagram and the other sites yt-dlp supports.
 
 Notes: private Instagram posts and stories need your login cookies (paste a `Cookie` header under *Authentication and cookies*). **Playlists, channels and multi-item posts:** paste the playlist or channel link and press **Find video**. A checklist of the videos appears (all ticked; use **All** / **None**), with a quality list that applies to every selected video. **Add to queue** puts them in the main queue; **Download now** also starts the queue, so they download one after another (raise *files downloaded at the same time* in the Scheduler to run several together). Up to 500 videos are listed, and private or deleted ones are skipped. A video link that also names a playlist (`watch?v=...&list=...`) is treated as that one video; paste the plain playlist link to get the list. The progress bar covers the whole video (video and audio streams together). yt-dlp must be kept current because sites change; the app does this for you by default (see Options), or use *Check for update*.
 
+### Videos from your browser, and logged-in sites (Instagram and others)
+
+Most Instagram posts, reels and stories, private or members-only videos and age-restricted videos need you to be logged in. Two ways to give the app your login:
+
+1. **With the browser extension (easiest):** log in to the site in your browser, then hover the video and click the *Download* button the extension shows over it (or use the extension's toolbar button or right-click menu). The app opens the Add dialog with the page, your login and the video ready; pick a quality and download. See [BROWSER-INTEGRATION.md](BROWSER-INTEGRATION.md).
+2. **By hand:** copy the site's `Cookie` request header from your browser's developer tools and paste it under *Authentication and cookies* in the Add dialog before pressing *Find video*.
+
+Without a login, Instagram answers with a message saying so ("Instagram needs you to be logged in..."). Use these only for your own account and content you may save. Cookies are used just for that lookup or download and never written to the command line; the temporary cookie file is deleted afterwards. Note that the download list stores the request headers of each download (including the cookie) in the app's database so a paused download can resume, so treat `%APPDATA%\DownloadManager` as private.
+
 ## Where data is stored
 
 | Item | Location |

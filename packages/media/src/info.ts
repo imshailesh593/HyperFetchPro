@@ -58,6 +58,9 @@ function playlistEntries(raw: Record<string, any>): PlaylistEntry[] {
     if (!url || UNAVAILABLE.test(title)) continue;
     out.push({ id: String(e.id ?? url), title, url, duration: typeof e.duration === 'number' ? e.duration : null });
   }
+  // A page with a single embedded video is reported as a playlist of one called "<page title> (1)": use the page title.
+  const pageTitle = typeof raw.title === 'string' ? raw.title : '';
+  if (out.length === 1 && pageTitle && out[0].title === `${pageTitle} (1)`) out[0].title = pageTitle;
   return out;
 }
 

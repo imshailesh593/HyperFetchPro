@@ -1,9 +1,10 @@
+import fsSync from 'node:fs';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Media, ProgressTracker, compareVersions, latestYtDlpVersion, parsePlan, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
+import { Media, ProgressTracker, cookieDomain, cookieHeaderToNetscape, explainError, prepareHeaders, compareVersions, latestYtDlpVersion, parsePlan, parseProgress, safeTitle, simplify, infoArgs } from '../src/index.js';
 
 const fake = fileURLToPath(new URL('./fake-ytdlp.mjs', import.meta.url));
 const launch = { binary: process.execPath, prefix: [fake], ffmpeg: null as string | null };
@@ -29,6 +30,85 @@ describe('parsing', () => {
     expect(() => infoArgs('file:///c:/x')).toThrow();
     expect(() => infoArgs('--exec=calc')).toThrow();
     expect(infoArgs('https://a/b').slice(-2)).toEqual(['--', 'https://a/b']);
+  });
+});
+
+describe('cookies and logins', () => {
+  it('picks the domain a browser would store the cookie for', () => {
+    expect(cookieDomain('www.instagram.com')).toBe('.instagram.com');
+    expect(cookieDomain('i.instagram.com')).toBe('.instagram.com');
+    expect(cookieDomain('www.bbc.co.uk')).toBe('.bbc.co.uk');
+    expect(cookieDomain('127.0.0.1')).toBe('127.0.0.1');
+    expect(cookieDomain('localhost')).toBe('localhost');
+  });
+
+  it('converts a Cookie header to a Netscape cookie file', () => {
+    const txt = cookieHeaderToNetscape('sessionid=abc%3A1; csrftoken=xyz; ; junk; =novalue', 'https://www.instagram.com/reel/x/', 1_000_000_000_000);
+    const rows = txt.trim().split('\n');
+    expect(rows[0]).toBe('# Netscape HTTP Cookie File');
+    expect(rows.slice(1)).toEqual([
+      ['.instagram.com', 'TRUE', '/', 'TRUE', '1002592000', 'sessionid', 'abc%3A1'].join('\t'),
+      ['.instagram.com', 'TRUE', '/', 'TRUE', '1002592000', 'csrftoken', 'xyz'].join('\t'),
+    ]);
+    // a local address is matched exactly and is not marked secure over plain http
+    const local = cookieHeaderToNetscape('a=b', 'http://127.0.0.1:8770/x').split('\n')[1].split('\t');
+    expect([local[0], local[1], local[2], local[3], local[5], local[6]]).toEqual(['127.0.0.1', 'FALSE', '/', 'FALSE', 'a', 'b']);
+  });
+
+  it('keeps cookies out of the header arguments and cleans up the temp file', () => {
+    const p = prepareHeaders('https://x.example/v', { Cookie: 'sid=abc', Referer: 'https://x.example/', 'User-Agent': 'UA' });
+    expect(p.headerArgs).toEqual(['--add-header', 'Referer:https://x.example/', '--add-header', 'User-Agent:UA']);
+    expect(p.cookieArgs[0]).toBe('--cookies');
+    const file = p.cookieArgs[1];
+    expect(fsSync.readFileSync(file, 'utf8')).toContain('\tsid\tabc');
+    p.cleanup();
+    p.cleanup(); // calling twice is harmless
+    expect(fsSync.existsSync(file)).toBe(false);
+    expect(prepareHeaders('https://x/', { Referer: 'r' }).cookieArgs).toEqual([]);
+    expect(prepareHeaders('https://x/', { cookie: 'not a pair' }).cookieArgs).toEqual([]);
+  });
+
+  it('never puts a cookie value on the command line', () => {
+    expect(infoArgs('https://x/v', { Cookie: 'sid=secret' }).join(' ')).not.toContain('secret');
+  });
+
+  it('adds login advice only to login-type errors', () => {
+    expect(explainError('https://www.instagram.com/p/x/', 'empty media response')).toMatch(/Instagram needs you to be logged in/);
+    expect(explainError('https://example.com/v', 'Sign in to confirm')).toMatch(/may need you to be logged in/);
+    expect(explainError('https://example.com/v', 'HTTP Error 404')).toBe('HTTP Error 404');
+    expect(explainError('https://example.com/v', 'Unable to download webpage: HTTP Error 403: Forbidden')).toMatch(/may need you to be logged in/);
+  });
+
+  it('reads info and downloads a login-only video when the Cookie header is supplied', async () => {
+    const log = path.join(dir, 'cookie-paths.txt');
+    process.env.DM_FAKE_LOG = log;
+    try {
+      const media = new Media(dir, launch);
+      const url = 'https://www.instagram.com/login'; // the fake picks its behaviour from the last path segment
+      await expect(media.info(url)).rejects.toThrow(/Instagram needs you to be logged in/);
+
+      const info = await media.info(url, { Cookie: 'sid=abc; other=1' });
+      expect(info.title).toBe('Private reel');
+
+      const d = media.downloader({ url, dir, stem: 'reel', format: 'b', headers: { Cookie: 'sid=abc' } });
+      expect(await d.start()).toBe('completed');
+      expect(fsSync.readFileSync(path.join(dir, 'reel.mp4'), 'utf8')).toBe('video-bytes');
+
+      const used = fsSync.readFileSync(log, 'utf8').trim().split('\n');
+      expect(used.length).toBe(2); // one for the info call, one for the download
+      for (const f of used) expect(fsSync.existsSync(f)).toBe(false); // temporary cookie files were removed
+    } finally {
+      delete process.env.DM_FAKE_LOG;
+    }
+  });
+});
+
+describe('single embedded video pages', () => {
+  it('names the only entry after the page, not "<title> (1)"', () => {
+    const one = simplify({ _type: 'playlist', title: 'Members clip', entries: [{ id: 'x', title: 'Members clip (1)', url: 'https://s/clip.mp4' }] }, false);
+    expect(one.playlist?.entries[0].title).toBe('Members clip');
+    const two = simplify({ _type: 'playlist', title: 'Mix', entries: [{ id: 'a', title: 'Mix (1)', url: 'https://s/a' }, { id: 'b', title: 'Mix (2)', url: 'https://s/b' }] }, false);
+    expect(two.playlist?.entries.map((e) => e.title)).toEqual(['Mix (1)', 'Mix (2)']); // real playlists keep their names
   });
 });
 

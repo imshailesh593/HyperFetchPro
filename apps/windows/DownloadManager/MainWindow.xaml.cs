@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using System.Diagnostics;
 using DownloadManager.Models;
 using DownloadManager.Services;
@@ -19,6 +20,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherQueue _ui = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _limitTimer;
     private bool _suppressNav;
+    private bool _dialogOpen;
     private bool _suppressLimit;
     private DownloadItem? _inspected;
 
@@ -55,6 +57,7 @@ public sealed partial class MainWindow : Window
             Vm.OnEvent(name, data);
             if (name == "media.updated") Toast($"yt-dlp was updated to {data.GetProperty("to").GetString()}");
             if (name == "capture.added") Toast("Download taken over from your browser");
+            if (name == "capture.media") OnBrowserVideo(data);
             // A queue set to "exit when finished" closes the app once it has nothing left to do.
             if (name == "queue.finished" && data.GetProperty("afterAction").GetString() == "exit") Close();
         });
@@ -140,10 +143,40 @@ public sealed partial class MainWindow : Window
 
     // --- toolbar --------------------------------------------------------------------
 
-    private async void Add_Click(object sender, RoutedEventArgs e)
+    private async void Add_Click(object sender, RoutedEventArgs e) => await OpenAddDialogAsync(null, null);
+
+    /// <summary>The browser extension sent a video page: come to the front and offer it in the Add dialog.</summary>
+    private void OnBrowserVideo(JsonElement data)
     {
-        var dialog = new AddDownloadDialog(this, Content.XamlRoot, Vm);
-        var result = await dialog.ShowAsync();
+        var url = data.TryGetProperty("url", out var u) ? u.GetString() : null;
+        var cookie = data.TryGetProperty("cookie", out var c) ? c.GetString() : null;
+        if (string.IsNullOrEmpty(url)) return;
+        BringToFront();
+        if (_dialogOpen) { Toast("Finish the open dialog first, then send the video again.", error: true); return; }
+        _ = OpenAddDialogAsync(url, cookie);
+    }
+
+    private void BringToFront()
+    {
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        if (NativeMethods.IsIconic(hwnd)) NativeMethods.ShowWindow(hwnd, 9); // SW_RESTORE
+        Activate();
+        NativeMethods.SetForegroundWindow(hwnd);
+    }
+
+    /// <summary>Only one dialog can be open at a time; this runs one and reports the result.</summary>
+    private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
+    {
+        _dialogOpen = true;
+        try { return await dialog.ShowAsync(); }
+        finally { _dialogOpen = false; }
+    }
+
+    private async Task OpenAddDialogAsync(string? url, string? cookie)
+    {
+        if (_dialogOpen) return;
+        var dialog = new AddDownloadDialog(this, Content.XamlRoot, Vm, url, cookie);
+        var result = await ShowDialogAsync(dialog);
         if (result == ContentDialogResult.None) return;
         var startNow = result == ContentDialogResult.Primary;
         await Run(async () =>
@@ -164,19 +197,20 @@ public sealed partial class MainWindow : Window
 
     private async void Scheduler_Click(object sender, RoutedEventArgs e)
     {
-        await new SchedulerDialog(Content.XamlRoot, Vm).ShowAsync();
+        if (!_dialogOpen) await ShowDialogAsync(new SchedulerDialog(Content.XamlRoot, Vm));
     }
 
     private async void EditCategories_Click(object sender, RoutedEventArgs e)
     {
-        await new CategoriesDialog(this, Content.XamlRoot, Vm).ShowAsync();
+        if (_dialogOpen) return;
+        await ShowDialogAsync(new CategoriesDialog(this, Content.XamlRoot, Vm));
         await Run(Vm.RefreshCategoriesAsync); // pick up added, renamed and deleted categories
     }
 
     private async void Options_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SettingsDialog(this, Content.XamlRoot, Vm);
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (_dialogOpen || await ShowDialogAsync(dialog) != ContentDialogResult.Primary) return;
         await Run(async () =>
         {
             await Vm.SaveSettingsAsync(dialog.Folder, dialog.Connections, dialog.SpeedMb, dialog.QuotaMb, dialog.QuotaHours, dialog.AutoUpdate);
@@ -297,7 +331,7 @@ public sealed partial class MainWindow : Window
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Close,
         };
-        if (await confirm.ShowAsync() == ContentDialogResult.Primary) await Run(() => Vm.RemoveAsync(d, deleteFiles: true));
+        if (!_dialogOpen && await ShowDialogAsync(confirm) == ContentDialogResult.Primary) await Run(() => Vm.RemoveAsync(d, deleteFiles: true));
     }
 
     // --- details drawer ----------------------------------------------------------------

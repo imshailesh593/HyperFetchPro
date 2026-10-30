@@ -8,6 +8,8 @@ const DEFAULTS = {
   // Hosts never taken over; * matches anything, e.g. *.example.com
   excludedHosts: '',
   minSizeBytes: 0,
+  // The small download button shown over videos on web pages.
+  showVideoButton: true,
 };
 
 let nextId = 1;
@@ -78,6 +80,18 @@ async function hand(item, force = false) {
   return false;
 }
 
+/**
+ * Asks the app to offer the video on a web page (YouTube, Instagram, ...). The app opens its Add dialog with the
+ * page link and the browser's cookies for that site, so logged-in content works, and the user picks the quality there.
+ * Cookies are sent only to the app on this computer, and only when the user clicked a download button.
+ */
+async function sendVideoPage(url, referrer) {
+  if (!/^https?:/i.test(url || '')) return { ok: false, error: 'not-a-web-page' };
+  const res = await send({ url, referrer: referrer || undefined, cookie: await cookieHeader(url), userAgent: navigator.userAgent }, 'media');
+  await setBadge(res.ok ? 'ok' : res.error === 'app-not-running' ? 'off' : 'err');
+  return res;
+}
+
 async function isComplete(id) {
   const [cur] = await chrome.downloads.search({ id }).catch(() => []);
   return !!cur && cur.state === 'complete';
@@ -92,18 +106,37 @@ chrome.downloads.onCreated.addListener((item) => {
   hand(item).catch(() => {});
 });
 
-// Right-click any link or media element: "Download with HyperFetch Pro".
+// Right-click menus: a link or media file goes straight to the app; "from this page" lets the app find the video.
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus?.create?.({ id: 'dm-link', title: 'Download with HyperFetch Pro', contexts: ['link', 'video', 'audio'] });
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({ id: 'dm-link', title: 'Download with HyperFetch Pro', contexts: ['link', 'video', 'audio'] });
+    chrome.contextMenus.create({ id: 'dm-page', title: 'Download video from this page with HyperFetch Pro', contexts: ['page'] });
+  });
 });
-chrome.contextMenus?.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId === 'dm-page') return void (await sendVideoPage(info.pageUrl));
   const url = info.linkUrl || info.srcUrl;
-  if (url) await hand({ id: -1, url, referrer: info.pageUrl }, true);
+  // A player that streams from a blob: address has no file to fetch; let the app work from the page instead.
+  if (url && /^https?:/i.test(url)) await hand({ id: -1, url, referrer: info.pageUrl }, true);
+  else if (info.pageUrl) await sendVideoPage(info.pageUrl);
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
+chrome.runtime.onMessage.addListener((msg, sender, respond) => {
   if (msg === 'ping') {
     send({}, 'ping').then((r) => respond({ connected: r.ok === true, error: r.error }));
+    return true;
+  }
+  // From the button over a video: use the address of the frame that sent it, not anything the page could claim.
+  if (msg && msg.type === 'video-page' && sender.url) {
+    sendVideoPage(sender.url, sender.tab && sender.tab.url).then(respond);
+    return true;
+  }
+  // From the toolbar popup: the page in the active tab.
+  if (msg && msg.type === 'video-page-active') {
+    chrome.tabs
+      .query({ active: true, currentWindow: true })
+      .then(([tab]) => (tab && tab.url ? sendVideoPage(tab.url) : { ok: false, error: 'no-page' }))
+      .then(respond);
     return true;
   }
 });

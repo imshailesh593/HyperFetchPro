@@ -16,6 +16,7 @@ let server: http.Server;
 let ipc: ReturnType<typeof startIpcServer>;
 let seenHeaders: http.IncomingHttpHeaders = {};
 const captured: number[] = [];
+const mediaRequests: any[] = [];
 
 function call(msg: object): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -37,7 +38,7 @@ beforeEach(async () => {
   store.setSetting('defaultDir', dir);
   api = new Api(store, () => undefined);
   const pipe = process.platform === 'win32' ? `\\\\.\\pipe\\dm-test-${Date.now()}` : path.join(dir, 's.sock');
-  ipc = startIpcServer(api, dir, (id) => captured.push(id), pipe);
+  ipc = startIpcServer(api, dir, (id) => captured.push(id), pipe, (m) => mediaRequests.push(m));
   await new Promise((r) => setTimeout(r, 50));
 });
 
@@ -71,6 +72,21 @@ describe('ipc', () => {
     expect(store.getDownload(r.result.id)?.status).toBe('completed');
     expect(seenHeaders).toMatchObject({ referer: 'http://site/page', cookie: 'a=b', 'user-agent': 'UA/1' });
     expect(captured).toContain(r.result.id);
+  });
+
+  it('passes a video page request on to the app, with the cookie', async () => {
+    mediaRequests.length = 0;
+    const r = await call({ token: ipc.token, method: 'media', params: { url: 'https://www.instagram.com/reel/abc/', cookie: 'sessionid=1', referrer: 'https://www.instagram.com/', userAgent: 'UA/1' } });
+    expect(r.ok).toBe(true);
+    expect(mediaRequests).toEqual([{ url: 'https://www.instagram.com/reel/abc/', cookie: 'sessionid=1', referrer: 'https://www.instagram.com/', userAgent: 'UA/1' }]);
+  });
+
+  it('refuses video requests that are unauthorised or not web links', async () => {
+    mediaRequests.length = 0;
+    expect((await call({ method: 'media', params: { url: 'https://x/' } })).error).toBe('unauthorized');
+    expect((await call({ token: ipc.token, method: 'media', params: { url: 'file:///c:/x' } })).ok).toBe(false);
+    expect((await call({ token: ipc.token, method: 'media', params: { url: 'javascript:alert(1)' } })).ok).toBe(false);
+    expect(mediaRequests).toEqual([]);
   });
 
   it('refuses non-http links', async () => {

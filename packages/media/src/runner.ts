@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
+import { explainError, prepareHeaders } from './cookies.js';
 import { PLAYLIST_LIMIT, FILE_PREFIX, PLAN_PREFIX, PROGRESS_TEMPLATE, ProgressTracker, parsePlan, parseProgress } from './info.js';
 
 export interface Launch {
@@ -40,30 +41,30 @@ function wantsSingleVideo(url: string): boolean {
   }
 }
 
-export function infoArgs(url: string, headers?: Record<string, string>): string[] {
+/** Arguments for reading video info. A Cookie header is not passed here; `runJson` turns it into a cookie file. */
+export function infoArgs(url: string, headers?: Record<string, string>, cookieArgs: string[] = []): string[] {
   assertWeb(url);
   // Playlists are listed flat (titles and links only) so reading them is fast.
   const scope = wantsSingleVideo(url) ? ['--no-playlist'] : ['--flat-playlist', '--playlist-end', String(PLAYLIST_LIMIT)];
-  return ['-J', ...scope, '--no-warnings', ...headerArgs(headers), '--', url];
-}
-
-function headerArgs(headers?: Record<string, string>): string[] {
-  return Object.entries(headers ?? {}).flatMap(([k, v]) => ['--add-header', `${k}:${v}`]);
+  return ['-J', ...scope, '--no-warnings', ...prepareHeaders(url, { ...headers, Cookie: '' }).headerArgs, ...cookieArgs, '--', url];
 }
 
 export function runJson(launch: Launch, url: string, headers?: Record<string, string>, timeoutMs = 60_000): Promise<Record<string, unknown>> {
+  assertWeb(url);
+  const prep = prepareHeaders(url, headers);
   return new Promise((resolve, reject) => {
-    const args = [...(launch.prefix ?? []), ...infoArgs(url, headers)];
+    const args = [...(launch.prefix ?? []), ...infoArgs(url, headers, prep.cookieArgs)];
     const child = spawn(launch.binary, args, { windowsHide: true });
     let out = '';
     let err = '';
     const timer = setTimeout(() => (killTree(child), reject(new Error('Timed out reading video information'))), timeoutMs);
     child.stdout.setEncoding('utf8').on('data', (d: string) => (out += d));
     child.stderr.setEncoding('utf8').on('data', (d: string) => (err += d));
-    child.on('error', (e) => (clearTimeout(timer), reject(e)));
+    child.on('error', (e) => (clearTimeout(timer), prep.cleanup(), reject(e)));
     child.on('close', (code) => {
       clearTimeout(timer);
-      if (code !== 0) return reject(new Error(lastError(err) || `yt-dlp exited with code ${code}`));
+      prep.cleanup();
+      if (code !== 0) return reject(new Error(explainError(url, lastError(err) || `yt-dlp exited with code ${code}`)));
       try {
         resolve(JSON.parse(out));
       } catch {
@@ -103,6 +104,7 @@ export class MediaDownloader extends EventEmitter {
   start(): Promise<'completed' | 'paused'> {
     if (this.pauseRequested) return Promise.resolve('paused');
     const { job, launch } = this;
+    const prep = prepareHeaders(job.url, job.headers);
     const args = [
       ...(launch.prefix ?? []),
       '--no-playlist', '--newline', '--no-colors', '--no-warnings', '--no-simulate', '--progress', '--continue',
@@ -112,7 +114,8 @@ export class MediaDownloader extends EventEmitter {
       '--print', `before_dl:${PLAN_PREFIX}%(requested_formats)j`,
       '--print', `after_move:${FILE_PREFIX}%(filepath)s`,
       ...(launch.ffmpeg ? ['--ffmpeg-location', launch.ffmpeg, '--merge-output-format', 'mp4'] : []),
-      ...headerArgs(job.headers),
+      ...prep.headerArgs,
+      ...prep.cookieArgs,
       '--', job.url,
     ];
 
@@ -136,11 +139,12 @@ export class MediaDownloader extends EventEmitter {
         }
       });
       child.stderr.setEncoding('utf8').on('data', (d: string) => (err += d));
-      child.on('error', reject);
+      child.on('error', (e) => (prep.cleanup(), reject(e)));
       child.on('close', (code) => {
         this.child = null;
+        prep.cleanup();
         if (this.pauseRequested) return resolve('paused');
-        if (code !== 0) return reject(new Error(lastError(err) || `yt-dlp exited with code ${code}`));
+        if (code !== 0) return reject(new Error(explainError(job.url, lastError(err) || `yt-dlp exited with code ${code}`)));
         if (file) this.emit('filename', path.basename(file));
         resolve('completed');
       });
