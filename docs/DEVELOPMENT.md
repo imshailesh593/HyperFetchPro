@@ -82,7 +82,7 @@ Use a throwaway profile so your own is untouched, and register the host temporar
 $env:DM_DATA_DIR = "$env:TEMP\dm-scratch"            # app and browser must share this
 .\scripts\install-native-host.ps1                     # HKCU keys; remove with -Uninstall afterwards
 Start-Process "...\DownloadManager.exe"
-msedge --user-data-dir="$env:TEMP\edge-profile" --load-extension="<repo>pps\extension" `
+msedge --user-data-dir="$env:TEMP\edge-profile" --load-extension="<repo>\apps\extension" `
        --disable-features=DisableLoadExtensionCommandLineSwitch http://localhost:8770/
 # then open the file link in the same profile: msedge --user-data-dir=... http://localhost:8770/pack.zip
 ```
@@ -91,14 +91,14 @@ Serve a file that is large enough (tens of MB) and throttled, with `Content-Disp
 
 ## Icons and branding
 
-`scripts\make-icons.ps1` draws the icon from code (gradient rounded square, white download arrow) and writes `Assetspp.ico` (7 sizes, PNG-compressed), `Assets\logo.png` and the extension's `icons\icon{16,32,48,128}.png`. Re-run it after changing the design and commit the outputs. `System.Drawing.Icon` cannot read PNG-compressed `.ico` files; check them with the Windows shell (`ExtractAssociatedIcon` on the built exe) or by parsing the file. In PowerShell variable names are case-insensitive: a loop variable `$s` overwrites `$S`.
+`scripts\make-icons.ps1` draws the icon from code (gradient rounded square, white download arrow) and writes `Assets\app.ico` (7 sizes, PNG-compressed), `Assets\logo.png` and the extension's `icons\icon{16,32,48,128}.png`. Re-run it after changing the design and commit the outputs. `System.Drawing.Icon` cannot read PNG-compressed `.ico` files; check them with the Windows shell (`ExtractAssociatedIcon` on the built exe) or by parsing the file. In PowerShell variable names are case-insensitive: a loop variable `$s` overwrites `$S`.
 
 The csproj sets `ApplicationIcon`, product/company/description and copies `Assets` to the output; `MainWindow` calls `AppWindow.SetIcon` for the taskbar and Alt+Tab icon. The installer uses the same icon (`SetupIconFile`). The executable and internal identifiers keep the earlier working name on purpose.
 
 ## Packaging
 
 ```powershell
-.\scriptsuild-package.ps1 -Version 0.1.0
+.\scripts\build-package.ps1 -Version 0.1.0
 ```
 
 Do not add `2>&1` when calling it from Windows PowerShell 5.1: stderr lines from npm are then treated as errors.

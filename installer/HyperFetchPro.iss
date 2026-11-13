@@ -29,7 +29,13 @@ DisableProgramGroupPage=yes
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; Flags: unchecked
-Name: "browser"; Description: "Set up browser integration for Chrome, Edge and Brave (current user)"
+Name: "browser"; Description: "Set up browser integration for Chrome, Edge, Brave and Firefox (current user)"
+Name: "autostart"; Description: "Start HyperFetch Pro minimized when I sign in to Windows (needed for the browser to hand downloads over)"
+
+[Registry]
+; Per-user autostart (no administrator needed); removed again on uninstall.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "HyperFetch Pro"; \
+  ValueData: """{app}\DownloadManager.exe"" --minimized"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Files]
 Source: "..\dist\HyperFetchPro\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion

@@ -33,6 +33,8 @@ Write-Host '4/6 Adding browser integration'
 Copy-Item "$root\apps\native-host\dist\native-host.cjs" "$out\integration\native-host.cjs"
 Copy-Item "$root\scripts\install-native-host.ps1" "$out\integration\install-native-host.ps1"
 Copy-Item "$root\apps\extension" "$out\integration\extension" -Recurse
+node "$root\scripts\build-firefox-extension.mjs" "$out\integration\firefox-extension" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Firefox extension build failed' }
 Copy-Item "$root\README.md" "$out\README.md"
 
 Write-Host '5/6 Zipping'

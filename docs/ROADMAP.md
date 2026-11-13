@@ -23,14 +23,14 @@
 2. **More options:** proxy settings, file types and sites to skip for browser capture inside the app.
 3. **Release polish:** code signing, auto-update of the app itself, MSIX or winget package.
 4. **macOS app** (SwiftUI) over the same protocol; native-messaging manifests for macOS browsers; signing/notarization.
-5. **Firefox** extension; stream/video sniffing in the extension; Alt-key bypass.
+5. **Firefox:** a Mozilla-signed build so release Firefox can keep it (the extension itself is done); stream/video sniffing in the extension; Alt-key bypass.
 6. **Site Grabber** (crawler with filters), FTP downloading in the engine, proxy support, site logins stored in the OS credential store, antivirus hook, CLI.
 7. **Android** (separate Kotlin app with on-device yt-dlp).
 
 ## Known limitations
 
 - Not yet tried against real internet servers beyond the yt-dlp/GitHub requests; engine tests use local servers.
-- The extension was verified in Edge only (see BROWSER-INTEGRATION.md); Chrome, Brave and Firefox are untried, and only a direct file link was tested (no referrer, no login-protected site).
+- The extension was verified in Edge and Firefox Developer Edition (see BROWSER-INTEGRATION.md); Chrome, Brave, release Firefox and a Mozilla-signed build are untried, and only a direct file link was tested (no referrer, no login-protected site).
 - Only YouTube and local test sites were tried for real. Instagram is verified only up to its logged-out error message and the cookie plumbing (a local site that requires a login cookie); a real logged-in Instagram download was not tried (it needs a real account). Long playlists are untested; playlist downloads run through the main queue one at a time by default.
 - Proxy, FTP, checksums, and per-site connection limits are not implemented.
 - The download limit can overshoot by roughly (connections x chunk size) = about 1 to 2 MB; video (yt-dlp) downloads are counted from progress reports and can overshoot more. The period is a fixed window from the first byte, not a rolling one. Only unit tests cover the automatic resume after a period (the shortest period is 6 minutes).

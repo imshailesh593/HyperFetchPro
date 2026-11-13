@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
@@ -7,8 +7,10 @@ import type { Api } from './api.js';
 
 /** Where other local programs (the browser native host) reach the running app. */
 export function ipcPath(dataDir: string): string {
+  // A custom data folder (DM_DATA_DIR: tests, portable copies) gets its own pipe, so it never meets the user's real app.
+  const own = process.env.DM_DATA_DIR ? '.' + createHash('sha1').update(path.resolve(dataDir).toLowerCase()).digest('hex').slice(0, 8) : '';
   return process.platform === 'win32'
-    ? `\\\\.\\pipe\\DownloadManager.${os.userInfo().username}`
+    ? `\\\\.\\pipe\\DownloadManager.${os.userInfo().username}${own}`
     : path.join(dataDir, 'dm.sock');
 }
 

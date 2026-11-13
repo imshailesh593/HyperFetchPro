@@ -14,14 +14,15 @@ Everything runs on your own computer. There is no server, no account and no tele
 | Queues, scheduler (start/stop times, retry), categories, SQLite store | Done, tested |
 | Core host (stdio JSON API) | Done, tested |
 | Windows app (WinUI 3) | Working: list, Add dialog, drawer, filters, speed limit |
-| Browser extension + native-messaging host (Chrome, Edge, Brave) | Working, now also with a download button over videos that sends the page and your login to the app: verified in real Edge 155 (a browser download was taken over, downloaded by the app over 8 connections with the browser's cookie, nothing left in the browser's folder). Chrome and Brave not tried |
+| Browser extension + native-messaging host (Chrome, Edge, Brave, Firefox) | Working, now also with a download button over videos that sends the page and your login to the app: verified in real Edge 155 (a browser download was taken over, downloaded by the app over 8 connections with the browser's cookie, nothing left in the browser's folder). Chrome and Brave not tried |
 | Video downloads (yt-dlp + ffmpeg) | Working end to end, including the Add-dialog flow (Find video, quality picker, one-click tool install): both tools install with checksum verification and a real public video downloaded and merged to a playable mp4. Playlists and channels supported (checklist in the dialog). yt-dlp updates itself (daily check, can be turned off). Only one site tried so far |
 | Options screen (folder, connections, speed limit, video tools install/update) | Done, verified through the real UI |
 | Download limit (quota, for example 40 MB per hour) and sync repeat interval | Done in the core with tests; limit verified in the real app (downloads held, status-bar notice). Resuming after the period is covered by unit tests only |
 | Scheduler (queues, start/stop times, days, parallel limits) and category editor | Done, verified through the real UI. "Exit when finished" is implemented but not yet tried |
 | Packaging and installer | Done: self-contained build with bundled Node, `Setup.exe` (per-user, no admin), zip, app icon and version info. Install, run and uninstall verified. Unsigned. Auto-update not built |
 | macOS app (SwiftUI) | Not started (needs a Mac and Xcode) |
-| Firefox, Android | Not started |
+| Firefox extension | Working in Firefox Developer Edition (button over videos, file capture, logins). Unsigned, so release Firefox can only load it temporarily; see docs/BROWSER-INTEGRATION.md |
+| Android | Not started |
 
 Details and known gaps: [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -38,7 +39,7 @@ Details and known gaps: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Install (Windows)
 
-Build the installer with `scriptsuild-package.ps1` (needs Node, the .NET 9 SDK and Inno Setup 6; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), then run `dist\HyperFetchPro-Setup-0.1.0.exe`. It installs for the current user without administrator rights, includes its own Node runtime, and can set up Chrome/Edge/Brave integration. Nothing else needs to be installed. The installer is not code-signed, so Windows SmartScreen may warn on first run.
+Build the installer with `scripts\build-package.ps1` (needs Node, the .NET 9 SDK and Inno Setup 6; see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)), then run `dist\HyperFetchPro-Setup-<version>.exe`. It installs for the current user without administrator rights, includes its own Node runtime, and can set up Chrome/Edge/Brave/Firefox integration. Nothing else needs to be installed. The installer is not code-signed, so Windows SmartScreen may warn on first run.
 
 ## Quick start from source (Windows)
 
@@ -76,7 +77,7 @@ packages/scheduler   DownloadManager + Scheduler (queues, schedules, retry, sync
 packages/media       yt-dlp / ffmpeg: discovery, install, format list, runner
 apps/core-host       stdio JSON host + local IPC server for the browser
 apps/native-host     browser native-messaging host
-apps/extension       Chrome/Edge/Brave MV3 extension
+apps/extension       Chrome/Edge/Brave/Firefox MV3 extension
 apps/windows/DownloadManager   WinUI 3 app
 scripts              install-native-host.ps1
 ```

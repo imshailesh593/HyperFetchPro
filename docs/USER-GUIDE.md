@@ -4,9 +4,9 @@ This guide describes what works today in the Windows app. Features marked *(plan
 
 ## Installing
 
-Run `HyperFetchPro-Setup-<version>.exe`. It installs for your user account (no administrator needed), adds a Start-menu shortcut, and by default sets up browser integration for Chrome, Edge and Brave. Nothing else needs to be installed; the app brings its own engine. Because the installer is not code-signed, Windows SmartScreen may ask you to confirm (*More info*, then *Run anyway*).
+Run `HyperFetchPro-Setup-<version>.exe`. It installs for your user account (no administrator needed), adds a Start-menu shortcut, and by default sets up browser integration for Chrome, Edge, Brave and Firefox. Nothing else needs to be installed; the app brings its own engine. Because the installer is not code-signed, Windows SmartScreen may ask you to confirm (*More info*, then *Run anyway*).
 
-To finish browser setup, load the extension once: open `chrome://extensions` (or `edge://extensions`), turn on *Developer mode*, choose *Load unpacked*, and pick the `integration\extension` folder inside the install folder (the final installer page can open it for you).
+To finish browser setup, load the extension once: open `chrome://extensions` (or `edge://extensions`), turn on *Developer mode*, choose *Load unpacked*, and pick the `integration\extension` folder inside the install folder (the final installer page can open it for you). For Firefox, see the *Firefox* section of [BROWSER-INTEGRATION.md](BROWSER-INTEGRATION.md): the build is unsigned, so release Firefox can only load it temporarily from `about:debugging`; Firefox Developer Edition can keep it.
 
 Uninstall from *Settings > Apps*. This removes the program and the browser registration but keeps your download list and settings (`%APPDATA%\DownloadManager`); delete that folder as well if you want a clean slate.
 
@@ -91,7 +91,7 @@ Click the pencil next to **CATEGORIES** in the sidebar to edit them: change the 
 
 ## Browser capture
 
-See [BROWSER-INTEGRATION.md](BROWSER-INTEGRATION.md). In short: install the extension and native host once; then downloads of the configured file types in Chrome, Edge or Brave are handed to the app with your login cookies. If the app is not running, the browser keeps the download, so nothing is lost.
+See [BROWSER-INTEGRATION.md](BROWSER-INTEGRATION.md). In short: install the extension and native host once; then downloads of the configured file types in Chrome, Edge, Brave or Firefox are handed to the app with your login cookies. If the app is not running, the browser keeps the download, so nothing is lost.
 
 ## Video and audio from websites
 
@@ -101,7 +101,7 @@ Works for YouTube, Instagram and the other sites yt-dlp supports.
 2. Press **Find video** in the *Video or audio from a website* box. The title, length and uploader appear with a **Quality** list (*Best available*, one entry per height, *Audio only*). Sizes are shown when the site reports them.
 3. Choose a quality, then **Download now** or **Add to queue**. It appears in the list like any download (queues, pause, resume and retry behave the same) and is saved as `.mp4` in the Video category folder.
 
-**First use:** if the tools are missing the box offers **Install video tools**. This downloads yt-dlp (from `github.com/yt-dlp`) and ffmpeg (about 130 MB, from yt-dlp's FFmpeg-Builds releases) into `<data folder>in`, checking each against its published SHA-256 before use. ffmpeg is needed because most sites serve video and audio separately and they must be merged; without it only single-file qualities are listed and many YouTube videos have none. On macOS install ffmpeg yourself (for example `brew install ffmpeg`).
+**First use:** if the tools are missing the box offers **Install video tools**. This downloads yt-dlp (from `github.com/yt-dlp`) and ffmpeg (about 130 MB, from yt-dlp's FFmpeg-Builds releases) into `<data folder>\bin`, checking each against its published SHA-256 before use. ffmpeg is needed because most sites serve video and audio separately and they must be merged; without it only single-file qualities are listed and many YouTube videos have none. On macOS install ffmpeg yourself (for example `brew install ffmpeg`).
 
 Notes: private Instagram posts and stories need your login cookies (paste a `Cookie` header under *Authentication and cookies*). **Playlists, channels and multi-item posts:** paste the playlist or channel link and press **Find video**. A checklist of the videos appears (all ticked; use **All** / **None**), with a quality list that applies to every selected video. **Add to queue** puts them in the main queue; **Download now** also starts the queue, so they download one after another (raise *files downloaded at the same time* in the Scheduler to run several together). Up to 500 videos are listed, and private or deleted ones are skipped. A video link that also names a playlist (`watch?v=...&list=...`) is treated as that one video; paste the plain playlist link to get the list. The progress bar covers the whole video (video and audio streams together). yt-dlp must be kept current because sites change; the app does this for you by default (see Options), or use *Check for update*.
 

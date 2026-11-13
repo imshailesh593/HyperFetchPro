@@ -1,5 +1,5 @@
 <#
-  Registers the native-messaging host for Chrome, Edge and Brave for the current user (no admin needed).
+  Registers the native-messaging host for Chrome, Edge, Brave and Firefox for the current user (no admin needed).
   Writes a launcher .cmd and a manifest into %LOCALAPPDATA%\DownloadManager\native-host, then adds HKCU keys.
 
   Works from the source tree (uses node from PATH and apps\native-host\dist) and from an installed
@@ -16,9 +16,10 @@ $keys = @(
   "HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\$name",
   "HKCU:\Software\BraveSoftware\Brave-Browser\NativeMessagingHosts\$name"
 )
+$firefoxKey = "HKCU:\Software\Mozilla\NativeMessagingHosts\$name"  # Firefox, Developer Edition and Nightly all read this
 
 if ($Uninstall) {
-  foreach ($k in $keys) { if (Test-Path $k) { Remove-Item $k -Recurse -Force } }
+  foreach ($k in $keys + $firefoxKey) { if (Test-Path $k) { Remove-Item $k -Recurse -Force } }
   if (Test-Path $outDir) { Remove-Item $outDir -Recurse -Force }
   'Native host unregistered.'
   return
@@ -56,6 +57,20 @@ foreach ($k in $keys) {
   New-Item -Path $k -Force | Out-Null
   Set-ItemProperty -Path $k -Name '(default)' -Value $manifestPath
 }
-"Registered for Chrome, Edge and Brave. Extension ID: $extId"
-"Now load the extension folder as an unpacked extension (chrome://extensions, Developer mode):"
+
+# Firefox names extensions by ID in allowed_extensions (it has no allowed_origins), so it gets its own manifest.
+$firefoxId = (Get-Content "$extDir\firefox-id.txt").Trim()
+$firefoxManifestPath = "$outDir\$name.firefox.json"
+[ordered]@{
+  name = $name
+  description = 'Download Manager browser integration'
+  path = "$outDir\launch.cmd"
+  type = 'stdio'
+  allowed_extensions = @($firefoxId)
+} | ConvertTo-Json | Set-Content $firefoxManifestPath -Encoding ascii
+New-Item -Path $firefoxKey -Force | Out-Null
+Set-ItemProperty -Path $firefoxKey -Name '(default)' -Value $firefoxManifestPath
+
+"Registered for Chrome, Edge, Brave and Firefox. Chrome extension ID: $extId, Firefox ID: $firefoxId"
+"Chrome/Edge/Brave: load this folder as an unpacked extension (chrome://extensions, Developer mode). Firefox: see docs\BROWSER-INTEGRATION.md."
 $extDir
